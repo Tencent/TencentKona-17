@@ -452,7 +452,9 @@ void os::init_system_properties_values() {
       }
     }
     Arguments::set_java_home(buf);
-    set_boot_path('/', ':');
+    if (!set_boot_path('/', ':')) {
+        vm_exit_during_initialization("Failed setting boot class path.", NULL);
+    }
   }
 
   // Where to look for native libraries.
@@ -2355,9 +2357,7 @@ int os::open(const char *path, int oflag, int mode) {
 // create binary file, rewriting existing file if required
 int os::create_binary_file(const char* path, bool rewrite_existing) {
   int oflags = O_WRONLY | O_CREAT;
-  if (!rewrite_existing) {
-    oflags |= O_EXCL;
-  }
+  oflags |= rewrite_existing ? O_TRUNC : O_EXCL;
   return ::open(path, oflags, S_IREAD | S_IWRITE);
 }
 

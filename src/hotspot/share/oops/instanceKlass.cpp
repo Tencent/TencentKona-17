@@ -2375,7 +2375,9 @@ void InstanceKlass::metaspace_pointers_do(MetaspaceClosure* it) {
   } else {
     it->push(&_default_vtable_indices);
   }
-  it->push(&_fields);
+
+  // _fields might be written into by Rewriter::scan_method() -> fd.set_has_initialized_final_update()
+  it->push(&_fields, MetaspaceClosure::_writable);
 
   if (itable_length() > 0) {
     itableOffsetEntry* ioe = (itableOffsetEntry*)start_of_itable();
@@ -2525,6 +2527,9 @@ void InstanceKlass::restore_unshareable_info(ClassLoaderData* loader_data, Handl
   constants()->restore_unshareable_info(CHECK);
 
   if (array_klasses() != NULL) {
+    // To get a consistent list of classes we need MultiArray_lock to ensure
+    // array classes aren't observed while they are being restored.
+     MutexLocker ml(MultiArray_lock);
     // Array classes have null protection domain.
     // --> see ArrayKlass::complete_create_array_klass()
     array_klasses()->restore_unshareable_info(ClassLoaderData::the_null_class_loader_data(), Handle(), CHECK);
@@ -3011,6 +3016,18 @@ InstanceKlass* InstanceKlass::compute_enclosing_class(bool* inner_is_member, TRA
     constantPoolHandle i_cp(THREAD, constants());
     if (ooff != 0) {
       Klass* ok = i_cp->klass_at(ooff, CHECK_NULL);
+      if (!ok->is_instance_klass()) {
+        // If the outer class is not an instance klass then it cannot have
+        // declared any inner classes.
+        ResourceMark rm(THREAD);
+        Exceptions::fthrow(
+          THREAD_AND_LOCATION,
+          vmSymbols::java_lang_IncompatibleClassChangeError(),
+          "%s and %s disagree on InnerClasses attribute",
+          ok->external_name(),
+          external_name());
+        return NULL;
+      }
       outer_klass = InstanceKlass::cast(ok);
       *inner_is_member = true;
     }

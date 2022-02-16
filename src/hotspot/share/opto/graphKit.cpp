@@ -529,13 +529,6 @@ void GraphKit::uncommon_trap_if_should_post_on_exceptions(Deoptimization::DeoptR
 void GraphKit::builtin_throw(Deoptimization::DeoptReason reason, Node* arg) {
   bool must_throw = true;
 
-  if (env()->jvmti_can_post_on_exceptions()) {
-    // check if we must post exception events, take uncommon trap if so
-    uncommon_trap_if_should_post_on_exceptions(reason, must_throw);
-    // here if should_post_on_exceptions is false
-    // continue on with the normal codegen
-  }
-
   // If this particular condition has not yet happened at this
   // bytecode, then use the uncommon trap mechanism, and allow for
   // a future recompilation if several traps occur here.
@@ -598,6 +591,13 @@ void GraphKit::builtin_throw(Deoptimization::DeoptReason reason, Node* arg) {
     }
     if (failing()) { stop(); return; }  // exception allocation might fail
     if (ex_obj != NULL) {
+      if (env()->jvmti_can_post_on_exceptions()) {
+        // check if we must post exception events, take uncommon trap if so
+        uncommon_trap_if_should_post_on_exceptions(reason, must_throw);
+        // here if should_post_on_exceptions is false
+        // continue on with the normal codegen
+      }
+
       // Cheat with a preallocated exception object.
       if (C->log() != NULL)
         C->log()->elem("hot_throw preallocated='1' reason='%s'",
@@ -1748,14 +1748,15 @@ Node* GraphKit::array_element_address(Node* ary, Node* idx, BasicType elembt,
 }
 
 //-------------------------load_array_element-------------------------
-Node* GraphKit::load_array_element(Node* ctl, Node* ary, Node* idx, const TypeAryPtr* arytype) {
+Node* GraphKit::load_array_element(Node* ary, Node* idx, const TypeAryPtr* arytype, bool set_ctrl) {
   const Type* elemtype = arytype->elem();
   BasicType elembt = elemtype->array_element_basic_type();
   Node* adr = array_element_address(ary, idx, elembt, arytype->size());
   if (elembt == T_NARROWOOP) {
     elembt = T_OBJECT; // To satisfy switch in LoadNode::make()
   }
-  Node* ld = make_load(ctl, adr, elemtype, elembt, arytype, MemNode::unordered);
+  Node* ld = access_load_at(ary, adr, arytype, elemtype, elembt,
+                            IN_HEAP | IS_ARRAY | (set_ctrl ? C2_CONTROL_DEPENDENT_LOAD : 0));
   return ld;
 }
 
@@ -4260,7 +4261,7 @@ void GraphKit::inflate_string_slow(Node* src, Node* dst, Node* start, Node* coun
   record_for_igvn(mem);
   set_control(head);
   set_memory(mem, TypeAryPtr::BYTES);
-  Node* ch = load_array_element(control(), src, i_byte, TypeAryPtr::BYTES);
+  Node* ch = load_array_element(src, i_byte, TypeAryPtr::BYTES, /* set_ctrl */ true);
   Node* st = store_to_memory(control(), array_element_address(dst, i_char, T_BYTE),
                              AndI(ch, intcon(0xff)), T_CHAR, TypeAryPtr::BYTES, MemNode::unordered,
                              false, false, true /* mismatched */);
