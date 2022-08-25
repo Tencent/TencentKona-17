@@ -6,7 +6,7 @@ Kona serves as the default JDK at Tencent internally, optimized for extreme-scal
 
 ## Using Tencent Kona JDK17
 
-Tencent Kona JDK17 currently supports Linux/x86_64 and Linux/Aarch64 platform.
+Tencent Kona JDK17 currently supports Linux/x86_64, Linux/Aarch64, Windows/x86_64, Mac/x86_64, Mac/Aarch64 platform.
 
 ## License
 
