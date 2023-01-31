@@ -23,6 +23,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2021. These
+ * modifications are Copyright (c) 2021 Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 // no precompiled headers
 #include "jvm.h"
 #include "classfile/vmSymbols.hpp"
@@ -2416,7 +2422,7 @@ void os::print_memory_info(outputStream* st) {
 // before "flags" so if we find a second "model name", then the
 // "flags" field is considered missing.
 static bool print_model_name_and_flags(outputStream* st, char* buf, size_t buflen) {
-#if defined(IA32) || defined(AMD64)
+#if defined(IA32) || defined(AMD64) || defined(MIPS)
   // Other platforms have less repetitive cpuinfo files
   FILE *fp = fopen("/proc/cpuinfo", "r");
   if (fp) {
@@ -2506,7 +2512,7 @@ void os::pd_print_cpu_info(outputStream* st, char* buf, size_t buflen) {
   print_sys_devices_cpu_info(st, buf, buflen);
 }
 
-#if defined(AMD64) || defined(IA32) || defined(X32)
+#if defined(AMD64) || defined(IA32) || defined(X32) || defined(MIPS)
 const char* search_string = "model name";
 #elif defined(M68K)
 const char* search_string = "CPU";

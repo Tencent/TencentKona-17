@@ -52,3 +52,24 @@ void LIR_Address::verify() const {
          "wrong type for addresses");
 }
 #endif // PRODUCT
+
+template<typename T>
+void LIR_List::cmp_branch(LIR_Condition condition, LIR_Opr left, LIR_Opr right, T tgt, CodeEmitInfo* info) {
+  cmp(condition, left, right, info);
+  branch(condition, tgt);
+}
+
+// Explicit instantiation for all supported types.
+template void LIR_List::cmp_branch(LIR_Condition, LIR_Opr, LIR_Opr, Label*, CodeEmitInfo*);
+template void LIR_List::cmp_branch(LIR_Condition, LIR_Opr, LIR_Opr, BlockBegin*, CodeEmitInfo*);
+template void LIR_List::cmp_branch(LIR_Condition, LIR_Opr, LIR_Opr, CodeStub*, CodeEmitInfo*);
+
+void LIR_List::cmp_branch(LIR_Condition condition, LIR_Opr left, LIR_Opr right, BlockBegin* block, BlockBegin* unordered) {
+  cmp(condition, left, right);
+  branch(condition, block, unordered);
+}
+
+void LIR_List::cmp_cmove(LIR_Condition condition, LIR_Opr left, LIR_Opr right, LIR_Opr src1, LIR_Opr src2, LIR_Opr dst, BasicType type) {
+  cmp(condition, left, right);
+  cmove(condition, src1, src2, dst, type);
+}

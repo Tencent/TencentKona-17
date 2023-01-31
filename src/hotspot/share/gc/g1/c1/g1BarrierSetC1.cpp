@@ -74,7 +74,6 @@ void G1BarrierSetC1::pre_barrier(LIRAccess& access, LIR_Opr addr_opr,
   // Read the marking-in-progress flag.
   LIR_Opr flag_val = gen->new_register(T_INT);
   __ load(mark_active_flag_addr, flag_val);
-  __ cmp(lir_cond_notEqual, flag_val, LIR_OprFact::intConst(0));
 
   LIR_PatchCode pre_val_patch_code = lir_patch_none;
 
@@ -103,7 +102,7 @@ void G1BarrierSetC1::pre_barrier(LIRAccess& access, LIR_Opr addr_opr,
     slow = new G1PreBarrierStub(pre_val);
   }
 
-  __ branch(lir_cond_notEqual, slow);
+  __ cmp_branch(lir_cond_notEqual, flag_val, LIR_OprFact::intConst(0), slow);
   __ branch_destination(slow->continuation());
 }
 
@@ -168,10 +167,8 @@ void G1BarrierSetC1::post_barrier(LIRAccess& access, LIR_OprDesc* addr, LIR_OprD
   }
   assert(new_val->is_register(), "must be a register at this point");
 
-  __ cmp(lir_cond_notEqual, xor_shift_res, LIR_OprFact::intptrConst(NULL_WORD));
-
   CodeStub* slow = new G1PostBarrierStub(addr, new_val);
-  __ branch(lir_cond_notEqual, slow);
+  __ cmp_branch(lir_cond_notEqual, xor_shift_res, LIR_OprFact::intptrConst(NULL_WORD), slow);
   __ branch_destination(slow->continuation());
 }
 

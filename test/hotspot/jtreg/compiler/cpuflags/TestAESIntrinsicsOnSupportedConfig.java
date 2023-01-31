@@ -22,11 +22,17 @@
  */
 
 /*
+ * This file has been modified by Loongson Technology in 2021, These
+ * modifications are Copyright (c) 2021, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
+/*
  * @test
  * @library /test/lib /
  * @modules java.base/jdk.internal.misc
  *          java.management
- * @requires vm.cpu.features ~= ".*aes.*" & !vm.graal.enabled
+ * @requires (vm.cpu.features ~= ".*aes.*" | os.arch == "loongarch64") & !vm.graal.enabled
  * @build sun.hotspot.WhiteBox
  * @run driver jdk.test.lib.helpers.ClassFileInstaller sun.hotspot.WhiteBox
  * @run main/othervm/timeout=600 -Xbootclasspath/a:.
