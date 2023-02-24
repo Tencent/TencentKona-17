@@ -459,7 +459,7 @@ static void patch_callers_callsite(MacroAssembler *masm) {
   // T5 isn't live so capture return address while we easily can
   __ move(T5, RA);
 
-  __ pushad();
+  __ push_call_clobbered_registers();
 
   // VM needs caller's callsite
   // VM needs target method
@@ -474,7 +474,7 @@ static void patch_callers_callsite(MacroAssembler *masm) {
           relocInfo::runtime_call_type);
 
   __ move(SP, TSR);
-  __ popad();
+  __ pop_call_clobbered_registers();
   __ bind(L);
 }
 

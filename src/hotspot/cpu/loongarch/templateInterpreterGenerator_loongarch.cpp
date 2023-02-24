@@ -1481,13 +1481,13 @@ address TemplateInterpreterGenerator::generate_native_entry(bool synchronized) {
     __ ld_w(t, thread, in_bytes(JavaThread::stack_guard_state_offset()));
     __ li(AT, (u1)StackOverflow::stack_guard_yellow_reserved_disabled);
     __ bne(t, AT, no_reguard);
-    __ pushad();
+    __ push_call_clobbered_registers();
     __ move(S5_heapbase, SP);
     assert(StackAlignmentInBytes == 16, "must be");
     __ bstrins_d(SP, R0, 3, 0);
     __ call(CAST_FROM_FN_PTR(address, SharedRuntime::reguard_yellow_pages), relocInfo::runtime_call_type);
     __ move(SP, S5_heapbase);
-    __ popad();
+    __ pop_call_clobbered_registers();
     //add for compressedoops
     __ reinit_heapbase();
     __ bind(no_reguard);

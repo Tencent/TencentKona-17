@@ -30,6 +30,8 @@ const size_t ZPlatformGranuleSizeShift = 21; // 2MB
 const size_t ZPlatformHeapViews        = 3;
 const size_t ZPlatformCacheLineSize    = DEFAULT_CACHE_LINE_SIZE;
 
+const bool ZPlatformLoadBarrierTestResultInRegister = false;
+
 size_t ZPlatformAddressOffsetBits();
 size_t ZPlatformAddressMetadataShift();
 

@@ -3035,7 +3035,7 @@ class StubGenerator: public StubCodeGenerator {
     __ addi_d(SP, SP, -4 * wordSize);  // four words for the returned {SP, FP, RA, PC}
 
     __ push(V0);
-    __ pushad_except_v0();
+    __ push_call_clobbered_registers_except(RegSet::of(V0));
 
     __ move(A0, T4);
     __ call_VM_leaf
@@ -3044,7 +3044,7 @@ class StubGenerator: public StubCodeGenerator {
 
     __ reset_last_Java_frame(true);
 
-    __ popad_except_v0();
+    __ pop_call_clobbered_registers_except(RegSet::of(V0));
 
     __ bnez(V0, deoptimize_label);
 

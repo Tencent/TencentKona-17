@@ -285,7 +285,7 @@ void ShenandoahBarrierSetAssembler::load_reference_barrier(MacroAssembler* masm,
     __ beqz(SCR2, not_cset);
   }
 
-  __ pushad_except_v0();
+  __ push_call_clobbered_registers_except(RegSet::of(V0));
   if (is_strong) {
     if (is_narrow) {
       __ li(RA, CAST_FROM_FN_PTR(address, ShenandoahRuntime::load_reference_barrier_strong_narrow));
@@ -304,7 +304,7 @@ void ShenandoahBarrierSetAssembler::load_reference_barrier(MacroAssembler* masm,
     __ li(RA, CAST_FROM_FN_PTR(address, ShenandoahRuntime::load_reference_barrier_phantom));
   }
   __ jalr(RA);
-  __ popad_except_v0();
+  __ pop_call_clobbered_registers_except(RegSet::of(V0));
 
   __ bind(not_cset);
 
@@ -320,9 +320,9 @@ void ShenandoahBarrierSetAssembler::load_reference_barrier(MacroAssembler* masm,
 
 void ShenandoahBarrierSetAssembler::iu_barrier(MacroAssembler* masm, Register dst, Register tmp) {
   if (ShenandoahIUBarrier) {
-    __ pushad();
+    __ push_call_clobbered_registers();
     satb_write_barrier_pre(masm, noreg, dst, TREG, tmp, true, false);
-    __ popad();
+    __ pop_call_clobbered_registers();
   }
 }
 
@@ -374,7 +374,7 @@ void ShenandoahBarrierSetAssembler::load_at(MacroAssembler* masm, DecoratorSet d
   // 3: apply keep-alive barrier if needed
   if (ShenandoahBarrierSet::need_keep_alive_barrier(decorators, type)) {
     __ enter();
-    __ pushad();
+    __ push_call_clobbered_registers();
     satb_write_barrier_pre(masm /* masm */,
                            noreg /* obj */,
                            dst /* pre_val */,
@@ -382,7 +382,7 @@ void ShenandoahBarrierSetAssembler::load_at(MacroAssembler* masm, DecoratorSet d
                            tmp1 /* tmp */,
                            true /* tosca_live */,
                            true /* expand_call */);
-    __ popad();
+    __ pop_call_clobbered_registers();
     __ leave();
   }
 }
@@ -729,10 +729,10 @@ void ShenandoahBarrierSetAssembler::generate_c1_pre_barrier_runtime_stub(StubAss
   __ b(done);
 
   __ bind(runtime);
-  __ pushad();
+  __ push_call_clobbered_registers();
   __ load_parameter(0, pre_val);
   __ call_VM_leaf(CAST_FROM_FN_PTR(address, ShenandoahRuntime::write_ref_field_pre_entry), pre_val, thread);
-  __ popad();
+  __ pop_call_clobbered_registers();
   __ bind(done);
 
   __ epilogue();
@@ -743,7 +743,7 @@ void ShenandoahBarrierSetAssembler::generate_c1_load_reference_barrier_runtime_s
   __ bstrins_d(SP, R0, 3, 0);
   // arg0 : object to be resolved
 
-  __ pushad_except_v0();
+  __ push_call_clobbered_registers_except(RegSet::of(V0));
   __ load_parameter(0, A0);
   __ load_parameter(1, A1);
 
@@ -774,7 +774,7 @@ void ShenandoahBarrierSetAssembler::generate_c1_load_reference_barrier_runtime_s
     __ li(RA, CAST_FROM_FN_PTR(address, ShenandoahRuntime::load_reference_barrier_phantom));
   }
   __ jalr(RA);
-  __ popad_except_v0();
+  __ pop_call_clobbered_registers_except(RegSet::of(V0));
 
   __ epilogue();
 }

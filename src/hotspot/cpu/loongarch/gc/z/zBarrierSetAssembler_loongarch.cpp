@@ -99,7 +99,7 @@ void ZBarrierSetAssembler::load_at(MacroAssembler* masm,
   if (dst != V0) {
     __ push(V0);
   }
-  __ pushad_except_v0();
+  __ push_call_clobbered_registers_except(RegSet::of(V0));
 
   if (dst != A0) {
     __ move(A0, dst);
@@ -107,7 +107,7 @@ void ZBarrierSetAssembler::load_at(MacroAssembler* masm,
   __ move(A1, scratch);
   __ MacroAssembler::call_VM_leaf_base(ZBarrierSetRuntime::load_barrier_on_oop_field_preloaded_addr(decorators), 2);
 
-  __ popad_except_v0();
+  __ pop_call_clobbered_registers_except(RegSet::of(V0));
 
   // Make sure dst has the return value.
   if (dst != V0) {
@@ -294,7 +294,7 @@ void ZBarrierSetAssembler::generate_c1_load_barrier_runtime_stub(StubAssembler* 
                                                                  DecoratorSet decorators) const {
   __ prologue("zgc_load_barrier stub", false);
 
-  __ pushad_except_v0();
+  __ push_call_clobbered_registers_except(RegSet::of(V0));
 
   // Setup arguments
   __ load_parameter(0, A0);
@@ -302,7 +302,7 @@ void ZBarrierSetAssembler::generate_c1_load_barrier_runtime_stub(StubAssembler* 
 
   __ call_VM_leaf(ZBarrierSetRuntime::load_barrier_on_oop_field_preloaded_addr(decorators), 2);
 
-  __ popad_except_v0();
+  __ pop_call_clobbered_registers_except(RegSet::of(V0));
 
   __ epilogue();
 }

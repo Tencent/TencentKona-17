@@ -984,7 +984,7 @@ void MacroAssembler::stop(const char* msg) {
 }
 
 void MacroAssembler::warn(const char* msg) {
-  pushad();
+  push_call_clobbered_registers();
   li(A0, (long)msg);
   push(S2);
   move(S2, SP);     // use S2 as a sender SP holder
@@ -993,7 +993,7 @@ void MacroAssembler::warn(const char* msg) {
   call(CAST_FROM_FN_PTR(address, MacroAssembler::debug), relocInfo::runtime_call_type);
   move(SP, S2);     // use S2 as a sender SP holder
   pop(S2);
-  popad();
+  pop_call_clobbered_registers();
 }
 
 void MacroAssembler::increment(Register reg, int imm) {
@@ -1337,7 +1337,7 @@ void MacroAssembler::get_thread(Register thread) {
   if (thread != V0) {
     push(V0);
   }
-  pushad_except_v0();
+  push_call_clobbered_registers_except(RegSet::of(V0));
 
   push(S5);
   move(S5, SP);
@@ -1348,7 +1348,7 @@ void MacroAssembler::get_thread(Register thread) {
   move(SP, S5);
   pop(S5);
 
-  popad_except_v0();
+  pop_call_clobbered_registers_except(RegSet::of(V0));
   if (thread != V0) {
     move(thread, V0);
     pop(V0);
@@ -1777,9 +1777,9 @@ void MacroAssembler::verify_oop_subroutine() {
 
   // handle errors
   bind(error);
-  pushad();
+  push_call_clobbered_registers();
   call(CAST_FROM_FN_PTR(address, MacroAssembler::debug), relocInfo::runtime_call_type);
-  popad();
+  pop_call_clobbered_registers();
   jr(RA);
 }
 
@@ -1971,83 +1971,17 @@ void MacroAssembler::verify_FPU(int stack_depth, const char* s) {
   //Unimplemented();
 }
 
-Register caller_saved_registers[]           = {T7, T5, T6, A0, A1, A2, A3, A4, A5, A6, A7, T0, T1, T2, T3, T8, T4, S8, RA, FP};
-Register caller_saved_registers_except_v0[] = {T7, T5, T6,     A1, A2, A3, A4, A5, A6, A7, T0, T1, T2, T3, T8, T4, S8, RA, FP};
+static RegSet caller_saved_regset = RegSet::range(A0, A7) + RegSet::range(T0, T8) + RegSet::of(FP, RA) - RegSet::of(SCR1, SCR2);
+static FloatRegSet caller_saved_fpu_regset = FloatRegSet::range(F0, F23);
 
-  //TODO: LA
-//In LA, F0~23 are all caller-saved registers
-FloatRegister caller_saved_fpu_registers[] = {F0, F12, F13};
-
-// We preserve all caller-saved register
-void  MacroAssembler::pushad(){
-  int i;
-  // Fixed-point registers
-  int len = sizeof(caller_saved_registers) / sizeof(caller_saved_registers[0]);
-  addi_d(SP, SP, -1 * len * wordSize);
-  for (i = 0; i < len; i++) {
-    st_d(caller_saved_registers[i], SP, (len - i - 1) * wordSize);
-  }
-
-  // Floating-point registers
-  len = sizeof(caller_saved_fpu_registers) / sizeof(caller_saved_fpu_registers[0]);
-  addi_d(SP, SP, -1 * len * wordSize);
-  for (i = 0; i < len; i++) {
-    fst_d(caller_saved_fpu_registers[i], SP, (len - i - 1) * wordSize);
-  }
-};
-
-void  MacroAssembler::popad(){
-  int i;
-  // Floating-point registers
-  int len = sizeof(caller_saved_fpu_registers) / sizeof(caller_saved_fpu_registers[0]);
-  for (i = 0; i < len; i++)
-  {
-    fld_d(caller_saved_fpu_registers[i], SP, (len - i - 1) * wordSize);
-  }
-  addi_d(SP, SP, len * wordSize);
-
-  // Fixed-point registers
-  len = sizeof(caller_saved_registers) / sizeof(caller_saved_registers[0]);
-  for (i = 0; i < len; i++)
-  {
-    ld_d(caller_saved_registers[i], SP, (len - i - 1) * wordSize);
-  }
-  addi_d(SP, SP, len * wordSize);
-};
-
-// We preserve all caller-saved register except V0
-void MacroAssembler::pushad_except_v0() {
-  int i;
-  // Fixed-point registers
-  int len = sizeof(caller_saved_registers_except_v0) / sizeof(caller_saved_registers_except_v0[0]);
-  addi_d(SP, SP, -1 * len * wordSize);
-  for (i = 0; i < len; i++) {
-    st_d(caller_saved_registers_except_v0[i], SP, (len - i - 1) * wordSize);
-  }
-
-  // Floating-point registers
-  len = sizeof(caller_saved_fpu_registers) / sizeof(caller_saved_fpu_registers[0]);
-  addi_d(SP, SP, -1 * len * wordSize);
-  for (i = 0; i < len; i++) {
-    fst_d(caller_saved_fpu_registers[i], SP, (len - i - 1) * wordSize);
-  }
+void MacroAssembler::push_call_clobbered_registers_except(RegSet exclude) {
+  push(caller_saved_regset - exclude);
+  push_fpu(caller_saved_fpu_regset);
 }
 
-void MacroAssembler::popad_except_v0() {
-  int i;
-  // Floating-point registers
-  int len = sizeof(caller_saved_fpu_registers) / sizeof(caller_saved_fpu_registers[0]);
-  for (i = 0; i < len; i++) {
-    fld_d(caller_saved_fpu_registers[i], SP, (len - i - 1) * wordSize);
-  }
-  addi_d(SP, SP, len * wordSize);
-
-  // Fixed-point registers
-  len = sizeof(caller_saved_registers_except_v0) / sizeof(caller_saved_registers_except_v0[0]);
-  for (i = 0; i < len; i++) {
-    ld_d(caller_saved_registers_except_v0[i], SP, (len - i - 1) * wordSize);
-  }
-  addi_d(SP, SP, len * wordSize);
+void MacroAssembler::pop_call_clobbered_registers_except(RegSet exclude) {
+  pop_fpu(caller_saved_fpu_regset);
+  pop(caller_saved_regset - exclude);
 }
 
 void MacroAssembler::push2(Register reg1, Register reg2) {

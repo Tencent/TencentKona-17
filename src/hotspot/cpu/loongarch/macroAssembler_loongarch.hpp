@@ -571,11 +571,20 @@ class MacroAssembler: public Assembler {
   void pop2 ()                  { addi_d(SP, SP, 16); }
   void push2(Register reg1, Register reg2);
   void pop2 (Register reg1, Register reg2);
-  //we need 2 fun to save and resotre general register
-  void pushad();
-  void popad();
-  void pushad_except_v0();
-  void popad_except_v0();
+  // Push and pop everything that might be clobbered by a native
+  // runtime call except SCR1 and SCR2.  (They are always scratch,
+  // so we don't have to protect them.)  Only save the lower 64 bits
+  // of each vector register. Additional registers can be excluded
+  // in a passed RegSet.
+  void push_call_clobbered_registers_except(RegSet exclude);
+  void pop_call_clobbered_registers_except(RegSet exclude);
+
+  void push_call_clobbered_registers() {
+    push_call_clobbered_registers_except(RegSet());
+  }
+  void pop_call_clobbered_registers() {
+    pop_call_clobbered_registers_except(RegSet());
+  }
   void push(RegSet regs) { if (regs.bits()) push(regs.bits()); }
   void pop(RegSet regs) { if (regs.bits()) pop(regs.bits()); }
   void push_fpu(FloatRegSet regs) { if (regs.bits()) push_fpu(regs.bits()); }
