@@ -26,6 +26,7 @@
 package java.net;
 
 import sun.security.util.SecurityConstants;
+import sun.security.action.GetPropertyAction;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -528,6 +529,14 @@ public class Socket implements java.io.Closeable {
             setImpl();
         try {
             impl.create(stream);
+            String tos = GetPropertyAction.privilegedGetProperty("kona.socket.tos.value");
+            if (tos != null ) {
+                try {
+                    impl.setOption(StandardSocketOptions.IP_TOS, Integer.valueOf(tos).intValue());
+                } catch (IOException ioe) {
+                    // do nothing
+                }
+            }
             created = true;
         } catch (IOException e) {
             throw new SocketException(e.getMessage());
@@ -550,6 +559,16 @@ public class Socket implements java.io.Closeable {
             // create a SOCKS SocketImpl that delegates to a platform SocketImpl
             SocketImpl delegate = SocketImpl.createPlatformSocketImpl(false);
             impl = new SocksSocketImpl(delegate);
+        }
+        if (impl != null) {
+            String tos = GetPropertyAction.privilegedGetProperty("kona.socket.tos.value");
+            if (tos != null) {
+                try {
+                    impl.setOption(StandardSocketOptions.IP_TOS, Integer.valueOf(tos).intValue());
+                } catch (IOException ioe) {
+                    // do nothing
+                }
+            }
         }
     }
 
