@@ -32,6 +32,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.Collections;
 
+import sun.security.action.GetPropertyAction;
 import sun.security.util.SecurityConstants;
 import sun.net.PlatformSocketImpl;
 
@@ -302,6 +303,16 @@ public class ServerSocket implements java.io.Closeable {
         } else {
             impl = SocketImpl.createPlatformSocketImpl(true);
         }
+        if (impl != null) {
+            String tos = GetPropertyAction.privilegedGetProperty("kona.socket.tos.value");
+            if (tos != null) {
+                try {
+                    impl.setOption(StandardSocketOptions.IP_TOS, Integer.valueOf(tos).intValue());
+                } catch (IOException ioe) {
+                    // do nothing
+                }
+            }
+        }
     }
 
     /**
@@ -315,6 +326,14 @@ public class ServerSocket implements java.io.Closeable {
             setImpl();
         try {
             impl.create(true);
+            String tos = GetPropertyAction.privilegedGetProperty("kona.socket.tos.value");
+            if (tos != null) {
+                try {
+                    impl.setOption(StandardSocketOptions.IP_TOS, Integer.valueOf(tos).intValue());
+                } catch (IOException ioe) {
+                    // do nothing
+                }
+            }
             created = true;
         } catch (IOException e) {
             throw new SocketException(e.getMessage());
