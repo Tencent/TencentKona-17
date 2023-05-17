@@ -145,27 +145,9 @@ uint32_t VM_Version::get_feature_flags_by_cpucfg() {
   } else if (_cpuid_info.cpucfg_info_id1.bits.ARCH == 0b10 ) {
     result |= CPU_LA64;
   }
-  if (_cpuid_info.cpucfg_info_id1.bits.UAL != 0)
-    result |= CPU_UAL;
 
   if (_cpuid_info.cpucfg_info_id2.bits.FP_CFG != 0)
     result |= CPU_FP;
-  if (_cpuid_info.cpucfg_info_id2.bits.LSX != 0)
-    result |= CPU_LSX;
-  if (_cpuid_info.cpucfg_info_id2.bits.LASX != 0)
-    result |= CPU_LASX;
-  if (_cpuid_info.cpucfg_info_id2.bits.COMPLEX != 0)
-    result |= CPU_COMPLEX;
-  if (_cpuid_info.cpucfg_info_id2.bits.CRYPTO != 0)
-    result |= CPU_CRYPTO;
-  if (_cpuid_info.cpucfg_info_id2.bits.LBT_X86 != 0)
-    result |= CPU_LBT_X86;
-  if (_cpuid_info.cpucfg_info_id2.bits.LBT_ARM != 0)
-    result |= CPU_LBT_ARM;
-  if (_cpuid_info.cpucfg_info_id2.bits.LBT_MIPS != 0)
-    result |= CPU_LBT_MIPS;
-  if (_cpuid_info.cpucfg_info_id2.bits.LAM != 0)
-    result |= CPU_LAM;
 
   if (_cpuid_info.cpucfg_info_id3.bits.CCDMA != 0)
     result |= CPU_CCDMA;
@@ -185,8 +167,10 @@ void VM_Version::get_processor_features() {
 
   clean_cpuFeatures();
 
+  get_os_cpu_info();
+
   get_cpu_info_stub(&_cpuid_info);
-  _features = get_feature_flags_by_cpucfg();
+  _features |= get_feature_flags_by_cpucfg();
 
   _supports_cx8 = true;
 

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 1997, 2013, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2015, 2021, Loongson Technology. All rights reserved.
+ * Copyright (c) 2015, 2023, Loongson Technology. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -196,25 +196,26 @@ public:
   };
 
 #define CPU_FEATURE_FLAGS(decl)                 \
-    decl(LA32,          la32,            1)     \
-    decl(LA64,          la64,            2)     \
-    decl(LLEXC,         llexc,           3)     \
-    decl(SCDLY,         scdly,           4)     \
-    decl(LLDBAR,        lldbar,          5)     \
-    decl(LBT_X86,       lbt_x86,         6)     \
-    decl(LBT_ARM,       lbt_arm,         7)     \
-    decl(LBT_MIPS,      lbt_mips,        8)     \
-    decl(CCDMA,         ccdma,           9)     \
-    decl(COMPLEX,       complex,         10)    \
-    decl(FP,            fp,              11)    \
-    decl(CRYPTO,        crypto,          14)    \
-    decl(LSX,           lsx,             15)    \
-    decl(LASX,          lasx,            17)    \
-    decl(LAM,           lam,             21)    \
-    decl(LLSYNC,        llsync,          23)    \
-    decl(TGTSYNC,       tgtsync,         24)    \
-    decl(ULSYNC,        ulsync,          25)    \
-    decl(UAL,           ual,             26)
+    decl(LAM,           lam,             1)     \
+    decl(UAL,           ual,             2)     \
+    decl(LSX,           lsx,             4)     \
+    decl(LASX,          lasx,            5)     \
+    decl(COMPLEX,       complex,         7)     \
+    decl(CRYPTO,        crypto,          8)     \
+    decl(LBT_X86,       lbt_x86,         10)    \
+    decl(LBT_ARM,       lbt_arm,         11)    \
+    decl(LBT_MIPS,      lbt_mips,        12)    \
+    /* flags above must follow Linux HWCAP */   \
+    decl(LA32,          la32,            13)    \
+    decl(LA64,          la64,            14)    \
+    decl(FP,            fp,              15)    \
+    decl(LLEXC,         llexc,           16)    \
+    decl(SCDLY,         scdly,           17)    \
+    decl(LLDBAR,        lldbar,          18)    \
+    decl(CCDMA,         ccdma,           19)    \
+    decl(LLSYNC,        llsync,          20)    \
+    decl(TGTSYNC,       tgtsync,         21)    \
+    decl(ULSYNC,        ulsync,          22)    \
 
   enum Feature_Flag {
 #define DECLARE_CPU_FEATURE_FLAG(id, name, bit) CPU_##id = (1 << bit),
@@ -245,8 +246,8 @@ protected:
   static CpuidInfo _cpuid_info;
 
   static uint32_t get_feature_flags_by_cpucfg();
-  static int      get_feature_flags_by_cpuinfo(int features);
   static void     get_processor_features();
+  static void     get_os_cpu_info();
 
 public:
   // Offsets for cpuid asm stub
