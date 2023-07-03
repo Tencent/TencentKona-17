@@ -2176,38 +2176,6 @@ void TemplateTable::_return(TosState state) {
   __ jr(T4);
 }
 
-// ----------------------------------------------------------------------------
-// Volatile variables demand their effects be made known to all CPU's
-// in order.  Store buffers on most chips allow reads & writes to
-// reorder; the JMM's ReadAfterWrite.java test fails in -Xint mode
-// without some kind of memory barrier (i.e., it's not sufficient that
-// the interpreter does not reorder volatile references, the hardware
-// also must not reorder them).
-//
-// According to the new Java Memory Model (JMM):
-// (1) All volatiles are serialized wrt to each other.  ALSO reads &
-//     writes act as aquire & release, so:
-// (2) A read cannot let unrelated NON-volatile memory refs that
-//     happen after the read float up to before the read.  It's OK for
-//     non-volatile memory refs that happen before the volatile read to
-//     float down below it.
-// (3) Similar a volatile write cannot let unrelated NON-volatile
-//     memory refs that happen BEFORE the write float down to after the
-//     write.  It's OK for non-volatile memory refs that happen after the
-//     volatile write to float up before it.
-//
-// We only put in barriers around volatile refs (they are expensive),
-// not _between_ memory refs (that would require us to track the
-// flavor of the previous memory refs).  Requirements (2) and (3)
-// require some barriers before volatile stores and after volatile
-// loads.  These nearly cover requirement (1) but miss the
-// volatile-store-volatile-load case.  This final case is placed after
-// volatile-stores although it could just as well go before
-// volatile-loads.
-void TemplateTable::volatile_barrier() {
-  if(os::is_MP()) __ membar(__ StoreLoad);
-}
-
 // we dont shift left 2 bits in get_cache_and_index_at_bcp
 // for we always need shift the index we use it. the ConstantPoolCacheEntry
 // is 16-byte long, index is the index in
@@ -2412,7 +2380,7 @@ void TemplateTable::getfield_or_static(int byte_no, bool is_static, RewriteContr
 
     Label notVolatile;
     __ beq(scratch, R0, notVolatile);
-    volatile_barrier();
+    __ membar(MacroAssembler::AnyAny);
     __ bind(notVolatile);
   }
 
@@ -2558,7 +2526,7 @@ void TemplateTable::getfield_or_static(int byte_no, bool is_static, RewriteContr
   {
     Label notVolatile;
     __ beq(scratch, R0, notVolatile);
-    volatile_barrier();
+    __ membar(Assembler::Membar_mask_bits(__ LoadLoad | __ LoadStore));
     __ bind(notVolatile);
   }
 }
@@ -2674,7 +2642,7 @@ void TemplateTable::putfield_or_static(int byte_no, bool is_static, RewriteContr
 
     Label notVolatile;
     __ beq(scratch, R0, notVolatile);
-    volatile_barrier();
+    __ membar(Assembler::Membar_mask_bits(__ StoreStore | __ LoadStore));
     __ bind(notVolatile);
   }
 
@@ -2846,7 +2814,7 @@ void TemplateTable::putfield_or_static(int byte_no, bool is_static, RewriteContr
   {
     Label notVolatile;
     __ beq(scratch, R0, notVolatile);
-    volatile_barrier();
+    __ membar(Assembler::Membar_mask_bits(__ StoreLoad | __ StoreStore));
     __ bind(notVolatile);
   }
 }
@@ -2956,7 +2924,7 @@ void TemplateTable::fast_storefield(TosState state) {
 
     Label notVolatile;
     __ beq(scratch, R0, notVolatile);
-    volatile_barrier();
+    __ membar(Assembler::Membar_mask_bits(__ StoreStore | __ LoadStore));
     __ bind(notVolatile);
   }
 
@@ -3005,7 +2973,7 @@ void TemplateTable::fast_storefield(TosState state) {
   {
     Label notVolatile;
     __ beq(scratch, R0, notVolatile);
-    volatile_barrier();
+    __ membar(Assembler::Membar_mask_bits(__ StoreLoad | __ StoreStore));
     __ bind(notVolatile);
   }
 }
@@ -3056,7 +3024,7 @@ void TemplateTable::fast_accessfield(TosState state) {
 
     Label notVolatile;
     __ beq(scratch, R0, notVolatile);
-    volatile_barrier();
+    __ membar(MacroAssembler::AnyAny);
     __ bind(notVolatile);
   }
 
@@ -3100,7 +3068,7 @@ void TemplateTable::fast_accessfield(TosState state) {
   {
     Label notVolatile;
     __ beq(scratch, R0, notVolatile);
-    volatile_barrier();
+    __ membar(Assembler::Membar_mask_bits(__ LoadLoad | __ LoadStore));
     __ bind(notVolatile);
   }
 }
@@ -3130,7 +3098,7 @@ void TemplateTable::fast_xaccess(TosState state) {
 
     Label notVolatile;
     __ beq(scratch, R0, notVolatile);
-    volatile_barrier();
+    __ membar(MacroAssembler::AnyAny);
     __ bind(notVolatile);
   }
 
@@ -3155,7 +3123,7 @@ void TemplateTable::fast_xaccess(TosState state) {
   {
     Label notVolatile;
     __ beq(scratch, R0, notVolatile);
-    volatile_barrier();
+    __ membar(Assembler::Membar_mask_bits(__ LoadLoad | __ LoadStore));
     __ bind(notVolatile);
   }
 }

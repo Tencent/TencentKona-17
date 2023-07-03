@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2003, 2013, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2015, 2021, Loongson Technology. All rights reserved.
+ * Copyright (c) 2015, 2023, Loongson Technology. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1964,8 +1964,8 @@ nmethod *SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
 
     // Now set thread in native
     __ addi_d(AT, R0, _thread_in_native);
-    if(os::is_MP()) {
-      __ dbar(0); // store release
+    if (os::is_MP()) {
+      __ membar(Assembler::Membar_mask_bits(__ LoadStore|__ StoreStore));
     }
     __ st_w(AT, thread, in_bytes(JavaThread::thread_state_offset()));
   }
@@ -2020,8 +2020,8 @@ nmethod *SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
   //     Thread A is resumed to finish this native method, but doesn't block here since it
   //     didn't see any synchronization is progress, and escapes.
   __ addi_d(AT, R0, _thread_in_native_trans);
-  if(os::is_MP()) {
-    __ dbar(0); // store release
+  if (os::is_MP()) {
+    __ membar(Assembler::Membar_mask_bits(__ LoadStore|__ StoreStore));
   }
   __ st_w(AT, thread, in_bytes(JavaThread::thread_state_offset()));
 
@@ -2068,8 +2068,8 @@ nmethod *SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
 
   // change thread state
   __ addi_d(AT, R0, _thread_in_Java);
-  if(os::is_MP()) {
-    __ dbar(0); // store release
+  if (os::is_MP()) {
+    __ membar(Assembler::Membar_mask_bits(__ LoadStore|__ StoreStore));
   }
   __ st_w(AT,  thread, in_bytes(JavaThread::thread_state_offset()));
   __ bind(after_transition);

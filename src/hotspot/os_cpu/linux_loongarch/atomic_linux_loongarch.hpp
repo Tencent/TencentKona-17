@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 1999, 2013, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2015, 2021, Loongson Technology. All rights reserved.
+ * Copyright (c) 2015, 2023, Loongson Technology. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -186,7 +186,7 @@ inline T Atomic::PlatformCmpxchg<4>::operator()(T volatile* dest,
       "   sc.w %[temp], %[dest]     \n\t"
       "   beqz %[temp], 1b          \n\t"
       "   b    3f                   \n\t"
-      "2: dbar 0                    \n\t"
+      "2: dbar 0x700                 \n\t"
       "3:                           \n\t"
       : [prev] "=&r" (prev), [temp] "=&r" (temp)
       : [_old] "r" (compare_value), [_new] "r" (exchange_value), [dest] "ZC" (*dest)
@@ -227,7 +227,7 @@ inline T Atomic::PlatformCmpxchg<8>::operator()(T volatile* dest,
       "   sc.d %[temp], %[dest]     \n\t"
       "   beqz %[temp], 1b          \n\t"
       "   b    3f                   \n\t"
-      "2: dbar 0                    \n\t"
+      "2: dbar 0x700                 \n\t"
       "3:                           \n\t"
       : [prev] "=&r" (prev), [temp] "=&r" (temp)
       : [_old] "r" (compare_value), [_new] "r" (exchange_value), [dest] "ZC" (*dest)

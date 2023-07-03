@@ -35,6 +35,7 @@
                         __asm__ __volatile__ ("nop"   : : : "memory"); \
                       else \
                         __asm__ __volatile__ ("sync"   : : : "memory");
+#define inlasm_synci() __asm__ __volatile__ ("synci 0($0)"   : : : "memory");
 
 inline void OrderAccess::loadload()   { inlasm_sync(); }
 inline void OrderAccess::storestore() { inlasm_sync(); }
@@ -44,8 +45,7 @@ inline void OrderAccess::storeload()  { inlasm_sync(); }
 inline void OrderAccess::acquire() { inlasm_sync(); }
 inline void OrderAccess::release() { inlasm_sync(); }
 inline void OrderAccess::fence()   { inlasm_sync(); }
-inline void OrderAccess::cross_modify_fence_impl() { inlasm_sync(); }
-
+inline void OrderAccess::cross_modify_fence_impl() { inlasm_synci(); }
 
 #undef inlasm_sync
 

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2003, 2013, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2015, 2022, Loongson Technology. All rights reserved.
+ * Copyright (c) 2015, 2023, Loongson Technology. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1378,8 +1378,8 @@ address TemplateInterpreterGenerator::generate_native_entry(bool synchronized) {
 #endif
 
   __ li(t, _thread_in_native);
-  if(os::is_MP()) {
-    __ dbar(0); // store release
+  if (os::is_MP()) {
+    __ membar(Assembler::Membar_mask_bits(__ LoadStore|__ StoreStore));
   }
   __ st_w(t, thread, in_bytes(JavaThread::thread_state_offset()));
 
@@ -1403,8 +1403,8 @@ address TemplateInterpreterGenerator::generate_native_entry(bool synchronized) {
   __ get_thread(thread);
 #endif
   __ li(t, _thread_in_native_trans);
-  if(os::is_MP()) {
-    __ dbar(0); // store release
+  if (os::is_MP()) {
+    __ membar(Assembler::Membar_mask_bits(__ LoadStore|__ StoreStore));
   }
   __ st_w(t, thread, in_bytes(JavaThread::thread_state_offset()));
 
@@ -1447,8 +1447,8 @@ address TemplateInterpreterGenerator::generate_native_entry(bool synchronized) {
 
   // change thread state
   __ li(t, _thread_in_Java);
-  if(os::is_MP()) {
-    __ dbar(0); // store release
+  if (os::is_MP()) {
+    __ membar(Assembler::Membar_mask_bits(__ LoadStore|__ StoreStore));
   }
   __ st_w(t, thread, in_bytes(JavaThread::thread_state_offset()));
   __ reset_last_Java_frame(thread, true);
