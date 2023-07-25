@@ -2964,6 +2964,22 @@ class StubGenerator: public StubCodeGenerator {
     return start;
   }
 
+  // Big-endian 128-bit + 64-bit -> 128-bit addition.
+  // Inputs: 128-bits. in is preserved.
+  // The least-significant 64-bit word is in the upper dword of the vector
+  // inc (the 64-bit increment) is preserved. Its lower dword must be zero
+  // Output: result
+  void be_add_128_64(FloatRegister result, FloatRegister in,
+               FloatRegister inc, FloatRegister tmp) {
+    assert_different_registers(result, tmp, inc);
+
+    __ addv(result, __ T2D, in, inc);      // Add inc to the least-significant dword of input
+    __ cmhi(tmp, __ T2D, inc, result);     // Check for result overflowing
+    __ ins(tmp, __ D, tmp, 0, 1);          // Move LSD of comparison result to MSD
+    __ ins(tmp, __ D, inc, 1, 0);          // Move 0 to LSD of comparison result
+    __ subv(result, __ T2D, result, tmp);  // Subtract -1 from MSD if there was an overflow
+  }
+
   // CTR AES crypt.
   // Arguments:
   //
@@ -3073,13 +3089,16 @@ class StubGenerator: public StubCodeGenerator {
       // Setup the counter
       __ movi(v4, __ T4S, 0);
       __ movi(v5, __ T4S, 1);
-      __ ins(v4, __ S, v5, 3, 3); // v4 contains { 0, 0, 0, 1 }
+      __ ins(v4, __ S, v5, 2, 2); // v4 contains { 0, 1 }
 
-      __ ld1(v0, __ T16B, counter); // Load the counter into v0
-      __ rev32(v16, __ T16B, v0);
-      __ addv(v16, __ T4S, v16, v4);
-      __ rev32(v16, __ T16B, v16);
-      __ st1(v16, __ T16B, counter); // Save the incremented counter back
+      // 128-bit big-endian increment
+      __ ld1(v0, __ T16B, counter);
+      __ rev64(v16, __ T16B, v0);
+      be_add_128_64(v16, v16, v4, /*tmp*/v5);
+      __ rev64(v16, __ T16B, v16);
+      __ st1(v16, __ T16B, counter);
+      // Previous counter value is in v0
+      // v4 contains { 0, 1 }
 
       {
         // We have fewer than bulk_width blocks of data left. Encrypt
@@ -3111,9 +3130,9 @@ class StubGenerator: public StubCodeGenerator {
 
         // Increment the counter, store it back
         __ orr(v0, __ T16B, v16, v16);
-        __ rev32(v16, __ T16B, v16);
-        __ addv(v16, __ T4S, v16, v4);
-        __ rev32(v16, __ T16B, v16);
+        __ rev64(v16, __ T16B, v16);
+        be_add_128_64(v16, v16, v4, /*tmp*/v5);
+        __ rev64(v16, __ T16B, v16);
         __ st1(v16, __ T16B, counter); // Save the incremented counter back
 
         __ b(inner_loop);
@@ -3161,7 +3180,7 @@ class StubGenerator: public StubCodeGenerator {
     // Keys should already be loaded into the correct registers
 
     __ ld1(v0, __ T16B, counter); // v0 contains the first counter
-    __ rev32(v16, __ T16B, v0); // v16 contains byte-reversed counter
+    __ rev64(v16, __ T16B, v0); // v16 contains byte-reversed counter
 
     // AES/CTR loop
     {
@@ -3171,11 +3190,11 @@ class StubGenerator: public StubCodeGenerator {
       // Setup the counters
       __ movi(v8, __ T4S, 0);
       __ movi(v9, __ T4S, 1);
-      __ ins(v8, __ S, v9, 3, 3); // v8 contains { 0, 0, 0, 1 }
+      __ ins(v8, __ S, v9, 2, 2); // v8 contains { 0, 1 }
 
       for (FloatRegister f = v0; f < v0 + bulk_width; f++) {
-        __ rev32(f, __ T16B, v16);
-        __ addv(v16, __ T4S, v16, v8);
+        __ rev64(f, __ T16B, v16);
+        be_add_128_64(v16, v16, v8, /*tmp*/v9);
       }
 
       __ ld1(v8, v9, v10, v11, __ T16B, __ post(in, 4 * 16));
@@ -3203,7 +3222,7 @@ class StubGenerator: public StubCodeGenerator {
     }
 
     // Save the counter back where it goes
-    __ rev32(v16, __ T16B, v16);
+    __ rev64(v16, __ T16B, v16);
     __ st1(v16, __ T16B, counter);
 
     __ pop(saved_regs, sp);
@@ -6481,10 +6500,16 @@ class StubGenerator: public StubCodeGenerator {
     __ ret(lr);
   }
 
-  void gen_ldaddal_entry(Assembler::operand_size size) {
+  void gen_ldadd_entry(Assembler::operand_size size, atomic_memory_order order) {
     Register prev = r2, addr = c_rarg0, incr = c_rarg1;
-    __ ldaddal(size, incr, prev, addr);
-    __ membar(Assembler::StoreStore|Assembler::StoreLoad);
+    // If not relaxed, then default to conservative.  Relaxed is the only
+    // case we use enough to be worth specializing.
+    if (order == memory_order_relaxed) {
+      __ ldadd(size, incr, prev, addr);
+    } else {
+      __ ldaddal(size, incr, prev, addr);
+      __ membar(Assembler::StoreStore|Assembler::StoreLoad);
+    }
     if (size == Assembler::xword) {
       __ mov(r0, prev);
     } else {
@@ -6514,12 +6539,21 @@ class StubGenerator: public StubCodeGenerator {
     StubCodeMark mark(this, "StubRoutines", "atomic entry points");
     address first_entry = __ pc();
 
-    // All memory_order_conservative
+    // ADD, memory_order_conservative
     AtomicStubMark mark_fetch_add_4(_masm, &aarch64_atomic_fetch_add_4_impl);
-    gen_ldaddal_entry(Assembler::word);
+    gen_ldadd_entry(Assembler::word, memory_order_conservative);
     AtomicStubMark mark_fetch_add_8(_masm, &aarch64_atomic_fetch_add_8_impl);
-    gen_ldaddal_entry(Assembler::xword);
+    gen_ldadd_entry(Assembler::xword, memory_order_conservative);
 
+    // ADD, memory_order_relaxed
+    AtomicStubMark mark_fetch_add_4_relaxed
+      (_masm, &aarch64_atomic_fetch_add_4_relaxed_impl);
+    gen_ldadd_entry(MacroAssembler::word, memory_order_relaxed);
+    AtomicStubMark mark_fetch_add_8_relaxed
+      (_masm, &aarch64_atomic_fetch_add_8_relaxed_impl);
+    gen_ldadd_entry(MacroAssembler::xword, memory_order_relaxed);
+
+    // XCHG, memory_order_conservative
     AtomicStubMark mark_xchg_4(_masm, &aarch64_atomic_xchg_4_impl);
     gen_swpal_entry(Assembler::word);
     AtomicStubMark mark_xchg_8_impl(_masm, &aarch64_atomic_xchg_8_impl);
@@ -7730,6 +7764,8 @@ void StubGenerator_generate(CodeBuffer* code, bool all) {
 
 DEFAULT_ATOMIC_OP(fetch_add, 4, )
 DEFAULT_ATOMIC_OP(fetch_add, 8, )
+DEFAULT_ATOMIC_OP(fetch_add, 4, _relaxed)
+DEFAULT_ATOMIC_OP(fetch_add, 8, _relaxed)
 DEFAULT_ATOMIC_OP(xchg, 4, )
 DEFAULT_ATOMIC_OP(xchg, 8, )
 DEFAULT_ATOMIC_OP(cmpxchg, 1, )
