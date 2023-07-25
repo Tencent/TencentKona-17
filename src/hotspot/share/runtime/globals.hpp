@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -700,6 +700,13 @@ const intx ObjectAlignmentInBytes = 8;
           "MonitorUsedDeflationThreshold is exceeded (0 is off).")          \
           range(0, max_jint)                                                \
                                                                             \
+  /* notice: the max range value here is max_jint, not max_intx  */         \
+  /* because of overflow issue                                   */         \
+  product(intx, GuaranteedAsyncDeflationInterval, 60000, DIAGNOSTIC,        \
+          "Async deflate idle monitors every so many milliseconds even "    \
+          "when MonitorUsedDeflationThreshold is NOT exceeded (0 is off).") \
+          range(0, max_jint)                                                \
+                                                                            \
   product(size_t, AvgMonitorsPerThreadEstimate, 1024, DIAGNOSTIC,           \
           "Used to estimate a variable ceiling based on number of threads " \
           "for use with MonitorUsedDeflationThreshold (0 is off).")         \
@@ -714,8 +721,9 @@ const intx ObjectAlignmentInBytes = 8;
                                                                             \
   product(intx, MonitorUsedDeflationThreshold, 90, DIAGNOSTIC,              \
           "Percentage of used monitors before triggering deflation (0 is "  \
-          "off). The check is performed on GuaranteedSafepointInterval "    \
-          "or AsyncDeflationInterval.")                                     \
+          "off). The check is performed on GuaranteedSafepointInterval, "   \
+          "AsyncDeflationInterval or GuaranteedAsyncDeflationInterval, "    \
+          "whichever is lower.")                                            \
           range(0, 100)                                                     \
                                                                             \
   product(uintx, NoAsyncDeflationProgressMax, 3, DIAGNOSTIC,                \
@@ -1998,10 +2006,10 @@ const intx ObjectAlignmentInBytes = 8;
   product(ccstr, ExtraSharedClassListFile, NULL,                            \
           "Extra classlist for building the CDS archive file")              \
                                                                             \
-  product(intx, ArchiveRelocationMode, 0, DIAGNOSTIC,                       \
+  product(intx, ArchiveRelocationMode, 1, DIAGNOSTIC,                       \
            "(0) first map at preferred address, and if "                    \
-           "unsuccessful, map at alternative address (default); "           \
-           "(1) always map at alternative address; "                        \
+           "unsuccessful, map at alternative address; "                     \
+           "(1) always map at alternative address (default); "              \
            "(2) always map at preferred address, and if unsuccessful, "     \
            "do not map the archive")                                        \
            range(0, 2)                                                      \

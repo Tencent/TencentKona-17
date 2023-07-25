@@ -1657,6 +1657,8 @@ void nmethod::post_compiled_method_load_event(JvmtiThreadState* state) {
     if (is_not_entrant() && can_convert_to_zombie()) {
       return;
     }
+    // Ensure the sweeper can't collect this nmethod until it become "active" with JvmtiThreadState::nmethods_do.
+    mark_as_seen_on_stack();
   }
 
   // This is a bad time for a safepoint.  We don't want
@@ -1829,7 +1831,8 @@ bool nmethod::is_unloading() {
   // oops in the CompiledMethod, by calling oops_do on it.
   state_unloading_cycle = current_cycle;
 
-  if (is_zombie() || method()->can_be_allocated_in_NonNMethod_space()) {
+  Method* m = method();
+  if (is_zombie() || (m != nullptr && m->can_be_allocated_in_NonNMethod_space())) {
     // When the nmethod is in NonNMethod space, we may reach here without IsUnloadingBehaviour.
     // However, we only allow this for special methods which never get unloaded.
 
