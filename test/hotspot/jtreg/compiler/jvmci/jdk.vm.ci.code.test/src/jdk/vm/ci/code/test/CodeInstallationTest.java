@@ -22,23 +22,23 @@
  */
 
 /*
- * This file has been modified by Loongson Technology in 2022, These
- * modifications are Copyright (c) 2022, Loongson Technology, and are made
+ * This file has been modified by Loongson Technology in 2023, These
+ * modifications are Copyright (c) 2022, 2023, Loongson Technology, and are made
  * available on the same license terms set forth above.
  */
 
 package jdk.vm.ci.code.test;
 
 import jdk.vm.ci.aarch64.AArch64;
-import jdk.vm.ci.loongarch64.LoongArch64;
 import jdk.vm.ci.amd64.AMD64;
+import jdk.vm.ci.loongarch64.LoongArch64;
 import jdk.vm.ci.code.Architecture;
 import jdk.vm.ci.code.CodeCacheProvider;
 import jdk.vm.ci.code.InstalledCode;
 import jdk.vm.ci.code.TargetDescription;
-import jdk.vm.ci.code.test.loongarch64.LoongArch64TestAssembler;
 import jdk.vm.ci.code.test.aarch64.AArch64TestAssembler;
 import jdk.vm.ci.code.test.amd64.AMD64TestAssembler;
+import jdk.vm.ci.code.test.loongarch64.LoongArch64TestAssembler;
 import jdk.vm.ci.hotspot.HotSpotCodeCacheProvider;
 import jdk.vm.ci.hotspot.HotSpotCompiledCode;
 import jdk.vm.ci.hotspot.HotSpotJVMCIRuntime;

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2022, Loongson Technology. All rights reserved.
+ * Copyright (c) 2022, 2023, Loongson Technology. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,6 +23,6 @@
  */
 
 /**
- * The LoongArch64 platform independent portions of the JVMCI API.
+ * The LoongArch64 HotSpot specific portions of the JVMCI API.
  */
-package jdk.vm.ci.loongarch64;
+package jdk.vm.ci.hotspot.loongarch64;
