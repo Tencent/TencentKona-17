@@ -422,6 +422,10 @@ bool NativeInstruction::is_sigill_zombie_not_entrant() {
   return uint_at(0) == NativeIllegalInstruction::instruction_code;
 }
 
+bool NativeInstruction::is_stop() {
+  return uint_at(0) == 0x04000000; // csrrd R0 0
+}
+
 void NativeIllegalInstruction::insert(address code_pos) {
   *(juint*)code_pos = instruction_code;
   ICache::invalidate_range(code_pos, instruction_size);

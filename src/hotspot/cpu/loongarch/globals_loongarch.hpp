@@ -97,7 +97,9 @@ define_pd_global(intx, AllocatePrefetchDistance,     -1);
           "Use CRC32 instructions for CRC32 computation")                   \
                                                                             \
   product(bool, UseActiveCoresMP, false,                                    \
-                "Eliminate barriers for single active cpu")
+                "Eliminate barriers for single active cpu")                 \
+                                                                            \
+  product(bool, TraceTraps, false, "Trace all traps the signal handler")
 
 // end of ARCH_FLAGS
 

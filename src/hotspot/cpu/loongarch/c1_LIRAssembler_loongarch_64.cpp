@@ -890,14 +890,7 @@ void LIR_Assembler::mem2reg(LIR_Opr src, LIR_Opr dest, BasicType type, LIR_Patch
       __ ld_ptr(dest->as_register(), as_Address(from_addr));
       break;
     case T_ADDRESS:
-      // FIXME: OMG this is a horrible kludge.  Any offset from an
-      // address that matches klass_offset_in_bytes() will be loaded
-      // as a word, not a long.
-      if (UseCompressedClassPointers && addr->disp() == oopDesc::klass_offset_in_bytes()) {
-        __ ld_wu(dest->as_register(), as_Address(from_addr));
-      } else {
-        __ ld_ptr(dest->as_register(), as_Address(from_addr));
-      }
+      __ ld_ptr(dest->as_register(), as_Address(from_addr));
       break;
     case T_INT:
       __ ld_w(dest->as_register(), as_Address(from_addr));
@@ -929,10 +922,6 @@ void LIR_Assembler::mem2reg(LIR_Opr src, LIR_Opr dest, BasicType type, LIR_Patch
     if (!UseZGC) {
       // Load barrier has not yet been applied, so ZGC can't verify the oop here
       __ verify_oop(dest->as_register());
-    }
-  } else if (type == T_ADDRESS && addr->disp() == oopDesc::klass_offset_in_bytes()) {
-    if (UseCompressedClassPointers) {
-      __ decode_klass_not_null(dest->as_register());
     }
   }
 }
@@ -2874,6 +2863,23 @@ void LIR_Assembler::emit_lock(LIR_OpLock* op) {
     Unimplemented();
   }
   __ bind(*op->stub()->continuation());
+}
+
+void LIR_Assembler::emit_load_klass(LIR_OpLoadKlass* op) {
+  Register obj = op->obj()->as_pointer_register();
+  Register result = op->result_opr()->as_pointer_register();
+
+  CodeEmitInfo* info = op->info();
+  if (info != NULL) {
+    add_debug_info_for_null_check_here(info);
+  }
+
+  if (UseCompressedClassPointers) {
+    __ ld_wu(result, obj, oopDesc::klass_offset_in_bytes());
+    __ decode_klass_not_null(result);
+  } else {
+    __ ld_ptr(result, obj, oopDesc::klass_offset_in_bytes());
+  }
 }
 
 void LIR_Assembler::emit_profile_call(LIR_OpProfileCall* op) {

@@ -80,6 +80,7 @@ class NativeInstruction {
   inline bool is_NativeCallTrampolineStub_at();
   //We use an illegal instruction for marking a method as not_entrant or zombie.
   bool is_sigill_zombie_not_entrant();
+  bool is_stop();
 
  protected:
   address addr_at(int offset) const    { return address(this) + offset; }

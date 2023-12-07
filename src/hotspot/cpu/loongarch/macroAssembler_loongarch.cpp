@@ -978,22 +978,11 @@ void MacroAssembler::debug(char* msg/*, RegistersForDebugging* regs*/) {
 
 
 void MacroAssembler::stop(const char* msg) {
-  li(A0, (long)msg);
-  call(CAST_FROM_FN_PTR(address, MacroAssembler::debug), relocInfo::runtime_call_type);
-  brk(17);
-}
-
-void MacroAssembler::warn(const char* msg) {
-  push_call_clobbered_registers();
-  li(A0, (long)msg);
-  push(S2);
-  move(S2, SP);     // use S2 as a sender SP holder
-  assert(StackAlignmentInBytes == 16, "must be");
-  bstrins_d(SP, R0, 3, 0); // align stack as required by ABI
-  call(CAST_FROM_FN_PTR(address, MacroAssembler::debug), relocInfo::runtime_call_type);
-  move(SP, S2);     // use S2 as a sender SP holder
-  pop(S2);
-  pop_call_clobbered_registers();
+#ifndef PRODUCT
+  block_comment(msg);
+#endif
+  csrrd(R0, 0);
+  emit_int64((uintptr_t)msg);
 }
 
 void MacroAssembler::increment(Register reg, int imm) {

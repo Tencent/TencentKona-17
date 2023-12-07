@@ -10395,13 +10395,13 @@ instruct ShouldNotReachHere( )
   ins_cost(300);
 
   // Use the following format syntax
-  format %{ "ILLTRAP   ;#@ShouldNotReachHere" %}
+  format %{ "stop; #@ShouldNotReachHere" %}
   ins_encode %{
     if (is_reachable()) {
-      // Here we should emit illtrap!
-      __ stop("ShouldNotReachHere");
+      __ stop(_halt_reason);
     }
   %}
+
   ins_pipe( pipe_jump );
 %}
 

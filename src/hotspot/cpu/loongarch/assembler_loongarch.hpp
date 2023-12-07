@@ -1196,6 +1196,7 @@ class Assembler : public AbstractAssembler  {
     stptr_w_op         = 0b00100101,
     ldptr_d_op         = 0b00100110,
     stptr_d_op         = 0b00100111,
+    csr_op             = 0b00000100,
 
     unknow_ops8        = 0b11111111
   };
@@ -1864,6 +1865,8 @@ public:
   void stptr_w  (Register rd, Register rj, int si16)  { assert(is_simm(si16, 16) && ((si16 & 0x3) == 0), "not a signed 16-bit int"); emit_int32(insn_I14RR(stptr_w_op, si16>>2, (int)rj->encoding(), (int)rd->encoding())); }
   void ldptr_d  (Register rd, Register rj, int si16)  { assert(is_simm(si16, 16) && ((si16 & 0x3) == 0), "not a signed 16-bit int"); emit_int32(insn_I14RR(ldptr_d_op, si16>>2, (int)rj->encoding(), (int)rd->encoding())); }
   void stptr_d  (Register rd, Register rj, int si16)  { assert(is_simm(si16, 16) && ((si16 & 0x3) == 0), "not a signed 16-bit int"); emit_int32(insn_I14RR(stptr_d_op, si16>>2, (int)rj->encoding(), (int)rd->encoding())); }
+  void csrrd  (Register rd, int csr)   { emit_int32(insn_I14RR(csr_op, csr, 0, (int)rd->encoding())); }
+  void csrwr  (Register rd, int csr)   { emit_int32(insn_I14RR(csr_op, csr, 1, (int)rd->encoding())); }
 
   void ld_b  (Register rd, Register rj, int si12)  { assert(is_simm(si12, 12), "not a signed 12-bit int"); emit_int32(insn_I12RR(ld_b_op,  si12, (int)rj->encoding(), (int)rd->encoding())); }
   void ld_h  (Register rd, Register rj, int si12)  { assert(is_simm(si12, 12), "not a signed 12-bit int"); emit_int32(insn_I12RR(ld_h_op,  si12, (int)rj->encoding(), (int)rd->encoding())); }
