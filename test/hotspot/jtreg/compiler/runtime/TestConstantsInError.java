@@ -136,7 +136,7 @@ public abstract class TestConstantsInError implements OutputProcessor {
             results.shouldMatch("Test_C1/.*::test \\(3 bytes\\)$")
                    .shouldMatch("Test_C2/.*::test \\(3 bytes\\)$");
 
-            if (isC1 && (Platform.isAArch64() || Platform.isLoongArch64())) { // no code patching
+            if (isC1 && (Platform.isAArch64() || Platform.isRISCV64() || Platform.isLoongArch64())) { // no code patching
                 results.shouldMatch("Test_C1/.*::test \\(3 bytes\\)   made not entrant")
                        .shouldMatch("Test_C2/.*::test \\(3 bytes\\)   made not entrant");
             } else {
@@ -174,7 +174,7 @@ public abstract class TestConstantsInError implements OutputProcessor {
                    .shouldMatch("Test_MH3/.*::test \\(3 bytes\\)$")
                    .shouldMatch("Test_MH4/.*::test \\(3 bytes\\)$");
 
-            if (isC1 && (Platform.isAArch64() || Platform.isLoongArch64())) { // no code patching
+            if (isC1 && (Platform.isAArch64() || Platform.isRISCV64() || Platform.isLoongArch64())) { // no code patching
                 results.shouldMatch("Test_MH1/.*::test \\(3 bytes\\)   made not entrant")
                        .shouldMatch("Test_MH2/.*::test \\(3 bytes\\)   made not entrant")
                        .shouldMatch("Test_MH3/.*::test \\(3 bytes\\)   made not entrant")
@@ -197,7 +197,7 @@ public abstract class TestConstantsInError implements OutputProcessor {
             results.shouldMatch("Test_MT1/.*::test \\(3 bytes\\)$")
                    .shouldMatch("Test_MT2/.*::test \\(3 bytes\\)$");
 
-            if (isC1 && (Platform.isAArch64() || Platform.isLoongArch64())) { // no code patching
+            if (isC1 && (Platform.isAArch64() || Platform.isRISCV64() || Platform.isLoongArch64())) { // no code patching
                 results.shouldMatch("Test_MT1/.*::test \\(3 bytes\\)   made not entrant")
                        .shouldMatch("Test_MT2/.*::test \\(3 bytes\\)   made not entrant");
             } else {

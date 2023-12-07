@@ -222,14 +222,10 @@ void ZBarrierSetAssembler::try_resolve_jobject_in_native(MacroAssembler* masm,
 #define __ ce->masm()->
 
 void ZBarrierSetAssembler::generate_c1_load_barrier_test(LIR_Assembler* ce,
-                                                         LIR_Opr ref,
-                                                         LIR_Opr res) const {
-  Register rscratch1 = AT;
-  Register rthread = TREG;
-  assert_different_registers(rscratch1, rthread, ref->as_register());
-
-  __ ld_d(rscratch1, address_bad_mask_from_thread(rthread));
-  __ andr(res->as_register(), ref->as_register(), rscratch1);
+                                                         LIR_Opr ref) const {
+  assert_different_registers(SCR1, TREG, ref->as_register());
+  __ ld_d(SCR1, address_bad_mask_from_thread(TREG));
+  __ andr(SCR1, SCR1, ref->as_register());
 }
 
 void ZBarrierSetAssembler::generate_c1_load_barrier_stub(LIR_Assembler* ce,

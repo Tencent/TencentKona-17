@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2023, These
+ * modifications are Copyright (c) 2022, 2023, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #ifndef SHARE_C1_C1_LIRASSEMBLER_HPP
 #define SHARE_C1_C1_LIRASSEMBLER_HPP
 
@@ -186,9 +192,10 @@ class LIR_Assembler: public CompilationResourceObj {
   void emit_op1(LIR_Op1* op);
   void emit_op2(LIR_Op2* op);
   void emit_op3(LIR_Op3* op);
+#if defined(RISCV) || defined(LOONGARCH)
   void emit_op4(LIR_Op4* op);
+#endif
   void emit_opBranch(LIR_OpBranch* op);
-  void emit_opCmpBranch(LIR_OpCmpBranch* op);
   void emit_opLabel(LIR_OpLabel* op);
   void emit_arraycopy(LIR_OpArrayCopy* op);
   void emit_updatecrc32(LIR_OpUpdateCRC32* op);
@@ -199,6 +206,7 @@ class LIR_Assembler: public CompilationResourceObj {
   void emit_typecheck_helper(LIR_OpTypeCheck *op, Label* success, Label* failure, Label* obj_is_null);
   void emit_compare_and_swap(LIR_OpCompareAndSwap* op);
   void emit_lock(LIR_OpLock* op);
+  void emit_load_klass(LIR_OpLoadKlass* op);
   void emit_call(LIR_OpJavaCall* op);
   void emit_rtcall(LIR_OpRTCall* op);
   void emit_profile_call(LIR_OpProfileCall* op);
@@ -220,9 +228,12 @@ class LIR_Assembler: public CompilationResourceObj {
   void volatile_move_op(LIR_Opr src, LIR_Opr result, BasicType type, CodeEmitInfo* info);
   void comp_mem_op(LIR_Opr src, LIR_Opr result, BasicType type, CodeEmitInfo* info);  // info set for null exceptions
   void comp_fl2i(LIR_Code code, LIR_Opr left, LIR_Opr right, LIR_Opr result, LIR_Op2* op);
+#if defined(RISCV) || defined(LOONGARCH)
+  void cmove(LIR_Condition code, LIR_Opr left, LIR_Opr right, LIR_Opr result, BasicType type,
+             LIR_Opr cmp_opr1 = LIR_OprFact::illegalOpr, LIR_Opr cmp_opr2 = LIR_OprFact::illegalOpr);
+#else
   void cmove(LIR_Condition code, LIR_Opr left, LIR_Opr right, LIR_Opr result, BasicType type);
-  void cmp_cmove(LIR_Condition code, LIR_Opr left, LIR_Opr right, LIR_Opr src1, LIR_Opr src2, LIR_Opr result, BasicType type);
-
+#endif
   void call(        LIR_OpJavaCall* op, relocInfo::relocType rtype);
   void ic_call(     LIR_OpJavaCall* op);
   void vtable_call( LIR_OpJavaCall* op);

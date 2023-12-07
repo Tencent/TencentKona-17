@@ -967,19 +967,20 @@ void LIR_Assembler::emit_opBranch(LIR_OpBranch* op) {
 #ifdef ASSERT
   assert(op->block() == NULL || op->block()->label() == op->label(), "wrong label");
   if (op->block() != NULL)  _branch_target_blocks.append(op->block());
-  assert(op->cond() == lir_cond_always, "must be");
 #endif
 
-  if (op->info() != NULL)
-    add_debug_info_for_branch(op->info());
+  if (op->cond() == lir_cond_always) {
+    if (op->info() != NULL)
+      add_debug_info_for_branch(op->info());
 
-  __ b_far(*(op->label()));
+    __ b_far(*(op->label()));
+  } else {
+    emit_cmp_branch(op);
+  }
 }
 
-void LIR_Assembler::emit_opCmpBranch(LIR_OpCmpBranch* op) {
+void LIR_Assembler::emit_cmp_branch(LIR_OpBranch* op) {
 #ifdef ASSERT
-  assert(op->block() == NULL || op->block()->label() == op->label(), "wrong label");
-  if (op->block() != NULL)  _branch_target_blocks.append(op->block());
   if (op->ublock() != NULL) _branch_target_blocks.append(op->ublock());
 #endif
 
@@ -995,7 +996,7 @@ void LIR_Assembler::emit_opCmpBranch(LIR_OpCmpBranch* op) {
   LIR_Opr opr2 = op->in_opr2();
   assert(op->condition() != lir_cond_always, "must be");
 
-  if (op->code() == lir_cmp_float_branch) {
+  if (op->code() == lir_cond_float_branch) {
     bool is_unordered = (op->ublock() == op->block());
     if (opr1->is_single_fpu()) {
       FloatRegister reg1 = opr1->as_float_reg();
@@ -1593,13 +1594,8 @@ void LIR_Assembler::emit_compare_and_swap(LIR_OpCompareAndSwap* op) {
   }
 }
 
-void LIR_Assembler::cmove(LIR_Condition condition, LIR_Opr opr1, LIR_Opr opr2,
-                          LIR_Opr result, BasicType type) {
-  Unimplemented();
-}
-
-void LIR_Assembler::cmp_cmove(LIR_Condition condition, LIR_Opr left, LIR_Opr right,
-                              LIR_Opr src1, LIR_Opr src2, LIR_Opr result, BasicType type) {
+void LIR_Assembler::cmove(LIR_Condition condition, LIR_Opr src1, LIR_Opr src2, LIR_Opr result, BasicType type,
+                          LIR_Opr left, LIR_Opr right) {
   assert(result->is_single_cpu() || result->is_double_cpu(), "expect single register for result");
   assert(left->is_single_cpu() || left->is_double_cpu(), "must be");
   Register regd = (result->type() == T_LONG) ? result->as_register_lo() : result->as_register();

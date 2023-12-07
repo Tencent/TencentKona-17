@@ -337,6 +337,7 @@ AC_DEFUN_ONCE([JVM_FEATURES_CHECK_SHENANDOAHGC],
     if test "x$OPENJDK_TARGET_CPU_ARCH" = "xx86" || \
         test "x$OPENJDK_TARGET_CPU" = "xaarch64" || \
         test "x$OPENJDK_TARGET_CPU" = "xppc64le" || \
+        test "x$OPENJDK_TARGET_CPU" = "xriscv64" || \
         test "x$OPENJDK_TARGET_CPU" = "xloongarch64"; then
       AC_MSG_RESULT([yes])
     else
@@ -387,7 +388,8 @@ AC_DEFUN_ONCE([JVM_FEATURES_CHECK_ZGC],
         AC_MSG_RESULT([no, $OPENJDK_TARGET_OS-$OPENJDK_TARGET_CPU])
         AVAILABLE=false
       fi
-    elif test "x$OPENJDK_TARGET_CPU" = "xppc64le"; then
+    elif test "x$OPENJDK_TARGET_CPU" = "xppc64le" || \
+        test "x$OPENJDK_TARGET_CPU" = "xriscv64"; then
       if test "x$OPENJDK_TARGET_OS" = "xlinux"; then
         AC_MSG_RESULT([yes])
       else

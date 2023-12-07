@@ -66,6 +66,8 @@ friend class ArrayCopyStub;
 
   void deoptimize_trap(CodeEmitInfo *info);
 
+  void emit_cmp_branch(LIR_OpBranch* op);
+
   enum {
     // call stub: CompiledStaticCall::to_interp_stub_size() +
     //            CompiledStaticCall::to_trampoline_stub_size()

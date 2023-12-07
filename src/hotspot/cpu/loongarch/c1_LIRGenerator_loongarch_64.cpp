@@ -260,31 +260,17 @@ void LIRGenerator::increment_counter(LIR_Address* addr, int step) {
   __ store(reg, addr);
 }
 
-template<typename T>
-void LIRGenerator::cmp_mem_int_branch(LIR_Condition condition, LIR_Opr base,
-                                      int disp, int c, T tgt, CodeEmitInfo* info) {
+void LIRGenerator::cmp_mem_int(LIR_Condition condition, LIR_Opr base, int disp, int c, CodeEmitInfo* info) {
   LIR_Opr reg = new_register(T_INT);
   __ load(generate_address(base, disp, T_INT), reg, info);
-  __ cmp_branch(condition, reg, LIR_OprFact::intConst(c), tgt);
+  __ cmp(condition, reg, LIR_OprFact::intConst(c));
 }
 
-// Explicit instantiation for all supported types.
-template void LIRGenerator::cmp_mem_int_branch(LIR_Condition, LIR_Opr, int, int, Label*, CodeEmitInfo*);
-template void LIRGenerator::cmp_mem_int_branch(LIR_Condition, LIR_Opr, int, int, BlockBegin*, CodeEmitInfo*);
-template void LIRGenerator::cmp_mem_int_branch(LIR_Condition, LIR_Opr, int, int, CodeStub*, CodeEmitInfo*);
-
-template<typename T>
-void LIRGenerator::cmp_reg_mem_branch(LIR_Condition condition, LIR_Opr reg, LIR_Opr base,
-                                      int disp, BasicType type, T tgt, CodeEmitInfo* info) {
+void LIRGenerator::cmp_reg_mem(LIR_Condition condition, LIR_Opr reg, LIR_Opr base, int disp, BasicType type, CodeEmitInfo* info) {
   LIR_Opr reg1 = new_register(T_INT);
   __ load(generate_address(base, disp, type), reg1, info);
-  __ cmp_branch(condition, reg, reg1, tgt);
+  __ cmp(condition, reg, reg1);
 }
-
-// Explicit instantiation for all supported types.
-template void LIRGenerator::cmp_reg_mem_branch(LIR_Condition, LIR_Opr, LIR_Opr, int, BasicType, Label*, CodeEmitInfo*);
-template void LIRGenerator::cmp_reg_mem_branch(LIR_Condition, LIR_Opr, LIR_Opr, int, BasicType, BlockBegin*, CodeEmitInfo*);
-template void LIRGenerator::cmp_reg_mem_branch(LIR_Condition, LIR_Opr, LIR_Opr, int, BasicType, CodeStub*, CodeEmitInfo*);
 
 bool LIRGenerator::strength_reduce_multiply(LIR_Opr left, jint c, LIR_Opr result, LIR_Opr tmp) {
   if (is_power_of_2(c - 1)) {
@@ -441,8 +427,8 @@ void LIRGenerator::do_ArithmeticOp_Long(ArithmeticOp* x) {
     }
     if (need_zero_check) {
       CodeEmitInfo* info = state_for(x);
-      CodeStub* stub = new DivByZeroStub(info);
-      __ cmp_branch(lir_cond_equal, right.result(), LIR_OprFact::longConst(0), stub);
+      __ cmp(lir_cond_equal, right.result(), LIR_OprFact::longConst(0));
+      __ branch(lir_cond_equal, new DivByZeroStub(info));
     }
 
     rlock_result(x);
@@ -512,8 +498,8 @@ void LIRGenerator::do_ArithmeticOp_Int(ArithmeticOp* x) {
     }
     if (need_zero_check) {
       CodeEmitInfo* info = state_for(x);
-      CodeStub* stub = new DivByZeroStub(info);
-      __ cmp_branch(lir_cond_equal, right_arg->result(), LIR_OprFact::longConst(0), stub);
+      __ cmp(lir_cond_equal, right_arg->result(), LIR_OprFact::longConst(0));
+      __ branch(lir_cond_equal, new DivByZeroStub(info));
     }
 
     LIR_Opr ill = LIR_OprFact::illegalOpr;
@@ -1359,13 +1345,14 @@ void LIRGenerator::do_If(If* x) {
     __ safepoint(LIR_OprFact::illegalOpr, state_for(x, x->state_before()));
   }
 
+  __ cmp(lir_cond(cond), left, right);
   // Generate branch profiling. Profiling code doesn't kill flags.
-  profile_branch(x, cond, left, right);
+  profile_branch(x, cond);
   move_to_phi(x->state());
   if (x->x()->type()->is_float_kind()) {
-    __ cmp_branch(lir_cond(cond), left, right, x->tsux(), x->usux());
+    __ branch(lir_cond(cond), x->tsux(), x->usux());
   } else {
-    __ cmp_branch(lir_cond(cond), left, right, x->tsux());
+    __ branch(lir_cond(cond), x->tsux());
   }
   assert(x->default_sux() == x->fsux(), "wrong destination above");
   __ jump(x->default_sux());

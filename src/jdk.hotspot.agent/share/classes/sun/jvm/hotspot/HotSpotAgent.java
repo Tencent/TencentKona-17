@@ -42,6 +42,7 @@ import sun.jvm.hotspot.debugger.MachineDescription;
 import sun.jvm.hotspot.debugger.MachineDescriptionAMD64;
 import sun.jvm.hotspot.debugger.MachineDescriptionPPC64;
 import sun.jvm.hotspot.debugger.MachineDescriptionAArch64;
+import sun.jvm.hotspot.debugger.MachineDescriptionRISCV64;
 import sun.jvm.hotspot.debugger.MachineDescriptionIntelX86;
 import sun.jvm.hotspot.debugger.MachineDescriptionMIPS64;
 import sun.jvm.hotspot.debugger.MachineDescriptionLOONGARCH64;
@@ -577,6 +578,8 @@ public class HotSpotAgent {
             machDesc = new MachineDescriptionPPC64();
         } else if (cpu.equals("aarch64")) {
             machDesc = new MachineDescriptionAArch64();
+        } else if (cpu.equals("riscv64")) {
+            machDesc = new MachineDescriptionRISCV64();
         } else if (cpu.equals("mips64")) {
             machDesc = new MachineDescriptionMIPS64();
         } else if (cpu.equals("loongarch64")) {

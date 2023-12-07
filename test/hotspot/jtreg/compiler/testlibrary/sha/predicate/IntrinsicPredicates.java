@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,7 +33,7 @@ import jdk.test.lib.Platform;
 import jdk.test.lib.cli.predicate.AndPredicate;
 import jdk.test.lib.cli.predicate.CPUSpecificPredicate;
 import jdk.test.lib.cli.predicate.OrPredicate;
-import sun.hotspot.WhiteBox;
+import jdk.test.whitebox.WhiteBox;
 
 import java.lang.reflect.Method;
 import java.util.function.BooleanSupplier;
@@ -75,16 +75,18 @@ public class IntrinsicPredicates {
 
     public static final BooleanSupplier SHA1_INSTRUCTION_AVAILABLE
             = new OrPredicate(new CPUSpecificPredicate("aarch64.*", new String[] { "sha1" }, null),
+              new OrPredicate(new CPUSpecificPredicate("riscv64.*", new String[] { "sha1" }, null),
               new OrPredicate(new CPUSpecificPredicate("s390.*",    new String[] { "sha1" }, null),
               // Basic instructions are used to implement SHA1 Intrinsics on LA, so "sha1" feature is not needed.
               new OrPredicate(new CPUSpecificPredicate("loongarch64.*", null, null),
               // x86 variants
               new OrPredicate(new CPUSpecificPredicate("amd64.*",   new String[] { "sha" },  null),
               new OrPredicate(new CPUSpecificPredicate("i386.*",    new String[] { "sha" },  null),
-                              new CPUSpecificPredicate("x86.*",     new String[] { "sha" },  null))))));
+                              new CPUSpecificPredicate("x86.*",     new String[] { "sha" },  null)))))));
 
     public static final BooleanSupplier SHA256_INSTRUCTION_AVAILABLE
             = new OrPredicate(new CPUSpecificPredicate("aarch64.*", new String[] { "sha256"       }, null),
+              new OrPredicate(new CPUSpecificPredicate("riscv64.*", new String[] { "sha256"       }, null),
               new OrPredicate(new CPUSpecificPredicate("s390.*",    new String[] { "sha256"       }, null),
               new OrPredicate(new CPUSpecificPredicate("ppc64.*",   new String[] { "sha"          }, null),
               new OrPredicate(new CPUSpecificPredicate("ppc64le.*", new String[] { "sha"          }, null),
@@ -95,10 +97,11 @@ public class IntrinsicPredicates {
               new OrPredicate(new CPUSpecificPredicate("i386.*",    new String[] { "sha"          }, null),
               new OrPredicate(new CPUSpecificPredicate("x86.*",     new String[] { "sha"          }, null),
               new OrPredicate(new CPUSpecificPredicate("amd64.*",   new String[] { "avx2", "bmi2" }, null),
-                              new CPUSpecificPredicate("x86_64",    new String[] { "avx2", "bmi2" }, null))))))))));
+                              new CPUSpecificPredicate("x86_64",    new String[] { "avx2", "bmi2" }, null)))))))))));
 
     public static final BooleanSupplier SHA512_INSTRUCTION_AVAILABLE
             = new OrPredicate(new CPUSpecificPredicate("aarch64.*", new String[] { "sha512"       }, null),
+              new OrPredicate(new CPUSpecificPredicate("riscv64.*", new String[] { "sha512"       }, null),
               new OrPredicate(new CPUSpecificPredicate("s390.*",    new String[] { "sha512"       }, null),
               new OrPredicate(new CPUSpecificPredicate("ppc64.*",   new String[] { "sha"          }, null),
               new OrPredicate(new CPUSpecificPredicate("ppc64le.*", new String[] { "sha"          }, null),
@@ -107,7 +110,7 @@ public class IntrinsicPredicates {
               new OrPredicate(new CPUSpecificPredicate("i386.*",    new String[] { "sha"          }, null),
               new OrPredicate(new CPUSpecificPredicate("x86.*",     new String[] { "sha"          }, null),
               new OrPredicate(new CPUSpecificPredicate("amd64.*",   new String[] { "avx2", "bmi2" }, null),
-                              new CPUSpecificPredicate("x86_64",    new String[] { "avx2", "bmi2" }, null)))))))));
+                              new CPUSpecificPredicate("x86_64",    new String[] { "avx2", "bmi2" }, null))))))))));
 
     public static final BooleanSupplier SHA3_INSTRUCTION_AVAILABLE
             // sha3 is only implemented on aarch64 for now

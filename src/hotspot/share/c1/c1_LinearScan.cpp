@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2005, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2005, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,8 +36,8 @@
 #include "utilities/bitMap.inline.hpp"
 
 /*
- * This file has been modified by Loongson Technology in 2022, These
- * modifications are Copyright (c) 2022, Loongson Technology, and are made
+ * This file has been modified by Loongson Technology in 2023, These
+ * modifications are Copyright (c) 2022, 2023, Loongson Technology, and are made
  * available on the same license terms set forth above.
  */
 
@@ -1246,27 +1246,15 @@ void LinearScan::add_register_hints(LIR_Op* op) {
       break;
     }
     case lir_cmove: {
+#if defined(RISCV) || defined(LOONGARCH)
+      assert(op->as_Op4() != NULL, "lir_cmove must be LIR_Op4");
+      LIR_Op4* cmove = (LIR_Op4*)op;
+#else
       assert(op->as_Op2() != NULL, "lir_cmove must be LIR_Op2");
       LIR_Op2* cmove = (LIR_Op2*)op;
+#endif
 
       LIR_Opr move_from = cmove->in_opr1();
-      LIR_Opr move_to = cmove->result_opr();
-
-      if (move_to->is_register() && move_from->is_register()) {
-        Interval* from = interval_at(reg_num(move_from));
-        Interval* to = interval_at(reg_num(move_to));
-        if (from != NULL && to != NULL) {
-          to->set_register_hint(from);
-          TRACE_LINEAR_SCAN(4, tty->print_cr("operation at op_id %d: added hint from interval %d to %d", cmove->id(), from->reg_num(), to->reg_num()));
-        }
-      }
-      break;
-    }
-    case lir_cmp_cmove: {
-      assert(op->as_Op4() != NULL, "lir_cmp_cmove must be LIR_Op4");
-      LIR_Op4* cmove = (LIR_Op4*)op;
-
-      LIR_Opr move_from = cmove->in_opr3();
       LIR_Opr move_to = cmove->result_opr();
 
       if (move_to->is_register() && move_from->is_register()) {
@@ -1971,6 +1959,14 @@ void LinearScan::resolve_exception_edge(XHandler* handler, int throwing_op_id, i
     // interval at the throwing instruction must be searched using the operands
     // of the phi function
     Value from_value = phi->operand_at(handler->phi_operand());
+    if (from_value == nullptr) {
+      // We have reached here in a kotlin application running with JVMTI
+      // capability "can_access_local_variables".
+      // The illegal state is not yet propagated to this phi. Do it here.
+      phi->make_illegal();
+      // We can skip the illegal phi edge.
+      return;
+    }
 
     // with phi functions it can happen that the same from_value is used in
     // multiple mappings, so notify move-resolver that this is allowed
@@ -3161,6 +3157,9 @@ void LinearScan::do_linear_scan() {
     }
   }
 
+#if !defined(RISCV) && !defined(LOONGARCH)
+  // Disable these optimizations on riscv temporarily, because it does not
+  // work when the comparison operands are bound to branches or cmoves.
   { TIME_LINEAR_SCAN(timer_optimize_lir);
 
     EdgeMoveOptimizer::optimize(ir()->code());
@@ -3168,6 +3167,7 @@ void LinearScan::do_linear_scan() {
     // check that cfg is still correct after optimizations
     ir()->verify();
   }
+#endif
 
   NOT_PRODUCT(print_lir(1, "Before Code Generation", false));
   NOT_PRODUCT(LinearScanStatistic::compute(this, _stat_final));
@@ -3409,9 +3409,7 @@ void LinearScan::verify_no_oops_in_fixed_intervals() {
           check_live = (move->patch_code() == lir_patch_none);
         }
         LIR_OpBranch* branch = op->as_OpBranch();
-        LIR_OpCmpBranch* cmp_branch = op->as_OpCmpBranch();
-        if ((branch != NULL && branch->stub() != NULL && branch->stub()->is_exception_throw_stub()) ||
-            (cmp_branch != NULL && cmp_branch->stub() != NULL && cmp_branch->stub()->is_exception_throw_stub())) {
+        if (branch != NULL && branch->stub() != NULL && branch->stub()->is_exception_throw_stub()) {
           // Don't bother checking the stub in this case since the
           // exception stub will never return to normal control flow.
           check_live = false;
@@ -6307,16 +6305,6 @@ void ControlFlowOptimizer::substitute_branch_target(BlockBegin* block, BlockBegi
       if (branch->ublock() == target_from) {
         branch->change_ublock(target_to);
       }
-    } else if (op->code() == lir_cmp_branch || op->code() == lir_cmp_float_branch) {
-      assert(op->as_OpCmpBranch() != NULL, "branch must be of type LIR_OpCmpBranch");
-      LIR_OpCmpBranch* branch = (LIR_OpCmpBranch*)op;
-
-      if (branch->block() == target_from) {
-        branch->change_block(target_to);
-      }
-      if (branch->ublock() == target_from) {
-        branch->change_ublock(target_to);
-      }
     }
   }
 }
@@ -6403,14 +6391,23 @@ void ControlFlowOptimizer::delete_unnecessary_jumps(BlockList* code) {
               // There might be a cmove inserted for profiling which depends on the same
               // compare. If we change the condition of the respective compare, we have
               // to take care of this cmove as well.
+#if defined(RISCV) || defined(LOONGARCH)
+              LIR_Op4* prev_cmove = NULL;
+#else
               LIR_Op2* prev_cmove = NULL;
+#endif
 
               for(int j = instructions->length() - 3; j >= 0 && prev_cmp == NULL; j--) {
                 prev_op = instructions->at(j);
                 // check for the cmove
                 if (prev_op->code() == lir_cmove) {
+#if defined(RISCV) || defined(LOONGARCH)
+                  assert(prev_op->as_Op4() != NULL, "cmove must be of type LIR_Op4");
+                  prev_cmove = (LIR_Op4*)prev_op;
+#else
                   assert(prev_op->as_Op2() != NULL, "cmove must be of type LIR_Op2");
                   prev_cmove = (LIR_Op2*)prev_op;
+#endif
                   assert(prev_branch->cond() == prev_cmove->condition(), "should be the same");
                 }
                 if (prev_op->code() == lir_cmp) {
@@ -6437,20 +6434,6 @@ void ControlFlowOptimizer::delete_unnecessary_jumps(BlockList* code) {
                   prev_cmove->set_in_opr1(prev_cmove->in_opr2());
                   prev_cmove->set_in_opr2(t);
                 }
-              }
-            }
-          } else if (prev_op->code() == lir_cmp_branch || prev_op->code() == lir_cmp_float_branch) {
-            assert(prev_op->as_OpCmpBranch() != NULL, "branch must be of type LIR_OpCmpBranch");
-            LIR_OpCmpBranch* prev_branch = (LIR_OpCmpBranch*)prev_op;
-
-            if (prev_branch->stub() == NULL) {
-              if (prev_branch->block() == code->at(i + 1) && prev_branch->info() == NULL) {
-                TRACE_LINEAR_SCAN(3, tty->print_cr("Negating conditional branch and deleting unconditional branch at end of block B%d", block->block_id()));
-
-                // eliminate a conditional branch to the immediate successor
-                prev_branch->change_block(last_branch->block());
-                prev_branch->negate_cond();
-                instructions->trunc_to(instructions->length() - 1);
               }
             }
           }
@@ -6527,13 +6510,6 @@ void ControlFlowOptimizer::verify(BlockList* code) {
       if (op_branch != NULL) {
         assert(op_branch->block() == NULL || code->find(op_branch->block()) != -1, "branch target not valid");
         assert(op_branch->ublock() == NULL || code->find(op_branch->ublock()) != -1, "branch target not valid");
-      }
-
-      LIR_OpCmpBranch* op_cmp_branch = instructions->at(j)->as_OpCmpBranch();
-
-      if (op_cmp_branch != NULL) {
-        assert(op_cmp_branch->block() == NULL || code->find(op_cmp_branch->block()) != -1, "branch target not valid");
-        assert(op_cmp_branch->ublock() == NULL || code->find(op_cmp_branch->ublock()) != -1, "branch target not valid");
       }
     }
 
@@ -6775,24 +6751,6 @@ void LinearScanStatistic::collect(LinearScan* allocator) {
           } else {
             inc_counter(counter_cond_branch);
           }
-          break;
-        }
-
-        case lir_cmp_branch:
-        case lir_cmp_float_branch: {
-          LIR_OpCmpBranch* branch = op->as_OpCmpBranch();
-          if (branch->block() == NULL) {
-            inc_counter(counter_stub_branch);
-          } else {
-            inc_counter(counter_cond_branch);
-          }
-          inc_counter(counter_cmp);
-          break;
-        }
-
-        case lir_cmp_cmove: {
-          inc_counter(counter_misc_inst);
-          inc_counter(counter_cmp);
           break;
         }
 

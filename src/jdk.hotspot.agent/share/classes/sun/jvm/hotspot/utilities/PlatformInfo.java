@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2000, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,7 +57,7 @@ public class PlatformInfo {
 
   public static boolean knownCPU(String cpu) {
     final String[] KNOWN =
-        new String[] {"i386", "x86", "x86_64", "amd64", "ppc64", "ppc64le", "aarch64", "mips64", "mips64el", "loongarch64"};
+        new String[] {"i386", "x86", "x86_64", "amd64", "ppc64", "ppc64le", "aarch64", "riscv64", "mips64", "mips64el", "loongarch64"};
 
     for(String s : KNOWN) {
       if(s.equals(cpu))

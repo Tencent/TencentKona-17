@@ -506,9 +506,6 @@ void LIR_Assembler::emit_opBranch(LIR_OpBranch* op) {
   }
 }
 
-void LIR_Assembler::emit_opCmpBranch(LIR_OpCmpBranch* op) {
-  ShouldNotReachHere();
-}
 
 void LIR_Assembler::emit_opConvert(LIR_OpConvert* op) {
   Bytecodes::Code code = op->bytecode();
@@ -815,12 +812,7 @@ int LIR_Assembler::load(Register base, int offset, LIR_Opr to_reg, BasicType typ
       case T_LONG  :   __ ld(to_reg->as_register_lo(), offset, base); break;
       case T_METADATA: __ ld(to_reg->as_register(), offset, base); break;
       case T_ADDRESS:
-        if (offset == oopDesc::klass_offset_in_bytes() && UseCompressedClassPointers) {
-          __ lwz(to_reg->as_register(), offset, base);
-          __ decode_klass_not_null(to_reg->as_register());
-        } else {
-          __ ld(to_reg->as_register(), offset, base);
-        }
+        __ ld(to_reg->as_register(), offset, base);
         break;
       case T_ARRAY : // fall through
       case T_OBJECT:
@@ -1608,10 +1600,6 @@ void LIR_Assembler::cmove(LIR_Condition condition, LIR_Opr opr1, LIR_Opr opr2, L
 
   load_to_reg(this, opr2, result);
   __ bind(skip);
-}
-
-void LIR_Assembler::cmp_cmove(LIR_Condition condition, LIR_Opr left, LIR_Opr right, LIR_Opr src1, LIR_Opr src2, LIR_Opr result, BasicType type) {
-  ShouldNotReachHere();
 }
 
 
@@ -2740,6 +2728,26 @@ void LIR_Assembler::emit_lock(LIR_OpLock* op) {
   __ bind(*op->stub()->continuation());
 }
 
+void LIR_Assembler::emit_load_klass(LIR_OpLoadKlass* op) {
+  Register obj = op->obj()->as_pointer_register();
+  Register result = op->result_opr()->as_pointer_register();
+
+  CodeEmitInfo* info = op->info();
+  if (info != NULL) {
+    if (!os::zero_page_read_protected() || !ImplicitNullChecks) {
+      explicit_null_check(obj, info);
+    } else {
+      add_debug_info_for_null_check_here(info);
+    }
+  }
+
+  if (UseCompressedClassPointers) {
+    __ lwz(result, oopDesc::klass_offset_in_bytes(), obj);
+    __ decode_klass_not_null(result);
+  } else {
+    __ ld(result, oopDesc::klass_offset_in_bytes(), obj);
+  }
+}
 
 void LIR_Assembler::emit_profile_call(LIR_OpProfileCall* op) {
   ciMethod* method = op->profiled_method();

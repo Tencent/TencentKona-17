@@ -193,7 +193,8 @@ void BarrierSetC1::load_at_resolved(LIRAccess& access, LIR_Opr result) {
   /* Normalize boolean value returned by unsafe operation, i.e., value  != 0 ? value = true : value false. */
   if (mask_boolean) {
     LabelObj* equalZeroLabel = new LabelObj();
-    __ cmp_branch(lir_cond_equal, result, 0, equalZeroLabel->label());
+    __ cmp(lir_cond_equal, result, 0);
+    __ branch(lir_cond_equal, equalZeroLabel->label());
     __ move(LIR_OprFact::intConst(1), result);
     __ branch_destination(equalZeroLabel->label());
   }
@@ -320,22 +321,25 @@ void BarrierSetC1::generate_referent_check(LIRAccess& access, LabelObj* cont) {
         referent_off = gen->new_register(T_LONG);
         __ move(LIR_OprFact::longConst(java_lang_ref_Reference::referent_offset()), referent_off);
       }
-      __ cmp_branch(lir_cond_notEqual, offset, referent_off, cont->label());
+      __ cmp(lir_cond_notEqual, offset, referent_off);
+      __ branch(lir_cond_notEqual, cont->label());
     }
     if (gen_source_check) {
       // offset is a const and equals referent offset
       // if (source == null) -> continue
-      __ cmp_branch(lir_cond_equal, base_reg, LIR_OprFact::oopConst(NULL), cont->label());
+      __ cmp(lir_cond_equal, base_reg, LIR_OprFact::oopConst(NULL));
+      __ branch(lir_cond_equal, cont->label());
     }
     LIR_Opr src_klass = gen->new_register(T_METADATA);
     if (gen_type_check) {
       // We have determined that offset == referent_offset && src != null.
       // if (src->_klass->_reference_type == REF_NONE) -> continue
-      __ move(new LIR_Address(base_reg, oopDesc::klass_offset_in_bytes(), T_ADDRESS), src_klass);
+      gen->load_klass(base_reg, src_klass, NULL);
       LIR_Address* reference_type_addr = new LIR_Address(src_klass, in_bytes(InstanceKlass::reference_type_offset()), T_BYTE);
       LIR_Opr reference_type = gen->new_register(T_INT);
       __ move(reference_type_addr, reference_type);
-      __ cmp_branch(lir_cond_equal, reference_type, LIR_OprFact::intConst(REF_NONE), cont->label());
+      __ cmp(lir_cond_equal, reference_type, LIR_OprFact::intConst(REF_NONE));
+      __ branch(lir_cond_equal, cont->label());
     }
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2003, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2003, 2022, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,6 +50,8 @@
 #elif defined(arm)
 #include <asm/ptrace.h>
 #define user_regs_struct  pt_regs
+#elif defined(riscv64)
+#include <asm/ptrace.h>
 #endif
 #if defined(mips) || defined(mipsel) || defined(mips64) || defined(mips64el)
 #include <asm/ptrace.h>

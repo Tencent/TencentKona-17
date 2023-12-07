@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2023, These
+ * modifications are Copyright (c) 2022, 2023, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #include "precompiled.hpp"
 #include "asm/assembler.inline.hpp"
 #include "c1/c1_Compilation.hpp"
@@ -691,9 +697,11 @@ void LIR_Assembler::emit_op2(LIR_Op2* op) {
       comp_fl2i(op->code(), op->in_opr1(), op->in_opr2(), op->result_opr(), op);
       break;
 
+#if !defined(RISCV) && !defined(LOONGARCH)
     case lir_cmove:
       cmove(op->condition(), op->in_opr1(), op->in_opr2(), op->result_opr(), op->type());
       break;
+#endif
 
     case lir_shl:
     case lir_shr:
@@ -756,11 +764,11 @@ void LIR_Assembler::emit_op2(LIR_Op2* op) {
   }
 }
 
-
+#if defined(RISCV) || defined(LOONGARCH)
 void LIR_Assembler::emit_op4(LIR_Op4* op) {
-  switch (op->code()) {
-    case lir_cmp_cmove:
-      cmp_cmove(op->condition(), op->in_opr1(), op->in_opr2(), op->in_opr3(), op->in_opr4(), op->result_opr(), op->type());
+  switch(op->code()) {
+    case lir_cmove:
+      cmove(op->condition(), op->in_opr1(), op->in_opr2(), op->result_opr(), op->type(), op->in_opr3(), op->in_opr4());
       break;
 
     default:
@@ -768,6 +776,7 @@ void LIR_Assembler::emit_op4(LIR_Op4* op) {
       break;
   }
 }
+#endif
 
 void LIR_Assembler::build_frame() {
   _masm->build_frame(initial_frame_size_in_bytes(), bang_size_in_bytes());

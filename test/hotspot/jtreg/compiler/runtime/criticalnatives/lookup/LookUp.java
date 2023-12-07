@@ -30,7 +30,7 @@
 
 /* @test
  * @bug 8167408
- * @requires (os.arch != "aarch64") & (os.arch != "arm") & (vm.flavor != "zero")
+ * @requires (os.arch != "aarch64") & (os.arch != "arm") & (os.arch != "riscv64") & (vm.flavor != "zero")
  * @requires (os.arch != "mips64el") & (os.arch != "loongarch64") & (vm.flavor != "zero")
  * @run main/othervm/native -Xcomp -XX:+CriticalJNINatives compiler.runtime.criticalnatives.lookup.LookUp
  */
