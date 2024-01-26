@@ -550,13 +550,13 @@ class MacroAssembler: public Assembler {
   void bswap_w(Register dst, Register src);
 
   void cmpxchg(Address addr, Register oldval, Register newval, Register resflag,
-               bool retold, bool barrier, bool weak = false, bool exchange = false);
+               bool retold, bool acquire, bool weak = false, bool exchange = false);
   void cmpxchg(Address addr, Register oldval, Register newval, Register tmp,
-               bool retold, bool barrier, Label& succ, Label* fail = nullptr);
+               bool retold, bool acquire, Label& succ, Label* fail = nullptr);
   void cmpxchg32(Address addr, Register oldval, Register newval, Register resflag,
-                 bool sign, bool retold, bool barrier, bool weak = false, bool exchange = false);
+                 bool sign, bool retold, bool acquire, bool weak = false, bool exchange = false);
   void cmpxchg32(Address addr, Register oldval, Register newval, Register tmp,
-                 bool sign, bool retold, bool barrier, Label& succ, Label* fail = nullptr);
+                 bool sign, bool retold, bool acquire, Label& succ, Label* fail = nullptr);
 
   void extend_sign(Register rh, Register rl) { /*stop("extend_sign");*/ guarantee(0, "LA not implemented yet");}
   void neg(Register reg) { /*dsubu(reg, R0, reg);*/ guarantee(0, "LA not implemented yet");}

@@ -515,9 +515,9 @@ void ShenandoahBarrierSetAssembler::cmpxchg_oop(MacroAssembler* masm,
 
   if (is_narrow) {
     __ cmpxchg32(addr, expected, new_val, tmp2, false /* sign */, false /* retold */,
-                 acquire /* barrier */, false /* weak */, true /* exchange */);
+                 acquire /* acquire */, false /* weak */, true /* exchange */);
   } else {
-    __ cmpxchg(addr, expected, new_val, tmp2, false /* retold */, acquire /* barrier */,
+    __ cmpxchg(addr, expected, new_val, tmp2, false /* retold */, acquire /* acquire */,
                false /* weak */, true /* exchange */);
   }
   // tmp2 holds value fetched.
@@ -581,9 +581,9 @@ void ShenandoahBarrierSetAssembler::cmpxchg_oop(MacroAssembler* masm,
   // compares result with expected.
   if (is_narrow) {
     __ cmpxchg32(addr, tmp2, new_val, tmp1, false /* sign */, false /* retold */,
-                 acquire /* barrier */, false /* weak */, false /* exchange */);
+                 acquire /* acquire */, false /* weak */, false /* exchange */);
   } else {
-    __ cmpxchg(addr, tmp2, new_val, tmp1, false /* retold */, acquire /* barrier */,
+    __ cmpxchg(addr, tmp2, new_val, tmp1, false /* retold */, acquire /* acquire */,
                false /* weak */, false /* exchange */);
   }
   // tmp1 set iff success, tmp2 holds value fetched.

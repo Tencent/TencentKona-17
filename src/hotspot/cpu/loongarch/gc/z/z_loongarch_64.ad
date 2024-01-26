@@ -64,12 +64,12 @@ static void z_compare_and_swap(MacroAssembler& _masm, const MachNode* node,
 #endif
   Address addr(mem);
   if (node->barrier_data() == ZLoadBarrierElided) {
-    __ cmpxchg(addr, oldval, newval, tmp, false /* retold */, acquire /* barrier */,
+    __ cmpxchg(addr, oldval, newval, tmp, false /* retold */, acquire /* acquire */,
                weak /* weak */, false /* exchange */);
     __ move(res, tmp);
   } else {
     __ move(tmp, oldval);
-    __ cmpxchg(addr, tmp, newval, AT, true /* retold */, acquire /* barrier */,
+    __ cmpxchg(addr, tmp, newval, AT, true /* retold */, acquire /* acquire */,
                false /* weak */, false /* exchange */);
     __ move(res, AT);
 
@@ -78,7 +78,7 @@ static void z_compare_and_swap(MacroAssembler& _masm, const MachNode* node,
     __ andr(AT, AT, tmp);
     __ beqz(AT, good);
     z_load_barrier_slow_path(_masm, node, addr, tmp, res /* used as tmp */);
-    __ cmpxchg(addr, oldval, newval, tmp, false /* retold */, acquire /* barrier */, weak /* weak */, false /* exchange */);
+    __ cmpxchg(addr, oldval, newval, tmp, false /* retold */, acquire /* acquire */, weak /* weak */, false /* exchange */);
     __ move(res, tmp);
     __ bind(good);
   }

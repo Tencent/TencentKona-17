@@ -292,8 +292,7 @@ void ZBarrierSetAssembler::try_resolve_jobject_in_native(MacroAssembler* masm, R
 // Code emitted by LIR node "LIR_OpZLoadBarrierTest" which in turn is emitted by ZBarrierSetC1::load_barrier.
 // The actual compare and branch instructions are represented as stand-alone LIR nodes.
 void ZBarrierSetAssembler::generate_c1_load_barrier_test(LIR_Assembler* ce,
-                                                         LIR_Opr ref,
-                                                         LIR_Opr res) const {
+                                                         LIR_Opr ref) const {
   __ block_comment("load_barrier_test (zgc) {");
 
   __ ld(R0, in_bytes(ZThreadLocalData::address_bad_mask_offset()), R16_thread);

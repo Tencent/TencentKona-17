@@ -1928,7 +1928,7 @@ nmethod *SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
     __ orr(swap_reg, swap_reg, AT);
 
     __ st_d(swap_reg, lock_reg, mark_word_offset);
-    __ cmpxchg(Address(obj_reg, 0), swap_reg, lock_reg, AT, true, false, lock_done);
+    __ cmpxchg(Address(obj_reg, 0), swap_reg, lock_reg, AT, true, true /* acquire */, lock_done);
     // Test if the oopMark is an obvious stack pointer, i.e.,
     //  1) (mark & 3) == 0, and
     //  2) sp <= mark < mark + os::pagesize()
@@ -2112,7 +2112,7 @@ nmethod *SharedRuntime::generate_native_wrapper(MacroAssembler* masm,
     // get address of the stack lock
     __ addi_d (c_rarg0, FP, lock_slot_fp_offset);
     // Atomic swap old header if oop still contains the stack lock
-    __ cmpxchg(Address(obj_reg, 0), c_rarg0, T8, AT, false, false, unlock_done, &slow_path_unlock);
+    __ cmpxchg(Address(obj_reg, 0), c_rarg0, T8, AT, false, true /* acquire */, unlock_done, &slow_path_unlock);
 
     // slow path re-enters here
     __ bind(unlock_done);

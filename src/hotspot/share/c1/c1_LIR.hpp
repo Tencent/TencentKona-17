@@ -1619,11 +1619,7 @@ class LIR_Op2: public LIR_Op {
     , _tmp4(LIR_OprFact::illegalOpr)
     , _tmp5(LIR_OprFact::illegalOpr)
     , _condition(condition) {
-    assert(code == lir_cmp || code == lir_assert
-#if defined(RISCV) || defined(LOONGARCH)
-    || code == lir_branch || code == lir_cond_float_branch
-#endif
-    , "code check");
+    assert(code == lir_cmp || code == lir_assert RISCV_ONLY(|| code == lir_branch || code == lir_cond_float_branch)LOONGARCH64_ONLY(|| code == lir_branch || code == lir_cond_float_branch), "code check");
   }
 
   LIR_Op2(LIR_Code code, LIR_Condition condition, LIR_Opr opr1, LIR_Opr opr2, LIR_Opr result, BasicType type)
@@ -1655,11 +1651,7 @@ class LIR_Op2: public LIR_Op {
     , _tmp4(LIR_OprFact::illegalOpr)
     , _tmp5(LIR_OprFact::illegalOpr)
     , _condition(lir_cond_unknown) {
-    assert(code != lir_cmp &&
-#if defined(RISCV) || defined(LOONGARCH)
-    code != lir_branch && code != lir_cond_float_branch &&
-#endif
-    is_in_range(code, begin_op2, end_op2), "code check");
+    assert(code != lir_cmp && RISCV_ONLY(code != lir_branch && code != lir_cond_float_branch &&)LOONGARCH64_ONLY(code != lir_branch && code != lir_cond_float_branch &&) is_in_range(code, begin_op2, end_op2), "code check");
   }
 
   LIR_Op2(LIR_Code code, LIR_Opr opr1, LIR_Opr opr2, LIR_Opr result, LIR_Opr tmp1, LIR_Opr tmp2 = LIR_OprFact::illegalOpr,
@@ -1675,11 +1667,7 @@ class LIR_Op2: public LIR_Op {
     , _tmp4(tmp4)
     , _tmp5(tmp5)
     , _condition(lir_cond_unknown) {
-    assert(code != lir_cmp &&
-#if defined(RISCV) || defined(LOONGARCH)
-    code != lir_branch && code != lir_cond_float_branch &&
-#endif
-    is_in_range(code, begin_op2, end_op2), "code check");
+    assert(code != lir_cmp && RISCV_ONLY(code != lir_branch && code != lir_cond_float_branch &&)LOONGARCH64_ONLY(code != lir_branch && code != lir_cond_float_branch &&) is_in_range(code, begin_op2, end_op2), "code check");
   }
 
   LIR_Opr in_opr1() const                        { return _opr1; }

@@ -21,6 +21,12 @@
  * questions.
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2022, These
+ * modifications are Copyright (c) 2022, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 package nsk.share.jdi;
 
 import nsk.share.*;
@@ -520,21 +526,22 @@ class CheckedFeatures {
          *  available only on the Microsoft Windows platform.
          *  "
          */
-        {"linux-i586",      "com.sun.jdi.SharedMemoryAttach"},
-        {"linux-ia64",      "com.sun.jdi.SharedMemoryAttach"},
-        {"linux-amd64",     "com.sun.jdi.SharedMemoryAttach"},
-        {"linux-x64",       "com.sun.jdi.SharedMemoryAttach"},
-        {"linux-aarch64",   "com.sun.jdi.SharedMemoryAttach"},
-        {"linux-arm",       "com.sun.jdi.SharedMemoryAttach"},
-        {"linux-ppc64",     "com.sun.jdi.SharedMemoryAttach"},
-        {"linux-ppc64le",   "com.sun.jdi.SharedMemoryAttach"},
-        {"linux-s390x",     "com.sun.jdi.SharedMemoryAttach"},
-        {"linux-riscv64",   "com.sun.jdi.SharedMemoryAttach"},
-        {"macosx-amd64",    "com.sun.jdi.SharedMemoryAttach"},
-        {"mac-x64",         "com.sun.jdi.SharedMemoryAttach"},
-        {"macosx-aarch64",  "com.sun.jdi.SharedMemoryAttach"},
-        {"mac-aarch64",     "com.sun.jdi.SharedMemoryAttach"},
-        {"aix-ppc64",       "com.sun.jdi.SharedMemoryAttach"},
+        {"linux-i586",        "com.sun.jdi.SharedMemoryAttach"},
+        {"linux-ia64",        "com.sun.jdi.SharedMemoryAttach"},
+        {"linux-amd64",       "com.sun.jdi.SharedMemoryAttach"},
+        {"linux-x64",         "com.sun.jdi.SharedMemoryAttach"},
+        {"linux-aarch64",     "com.sun.jdi.SharedMemoryAttach"},
+        {"linux-arm",         "com.sun.jdi.SharedMemoryAttach"},
+        {"linux-ppc64",       "com.sun.jdi.SharedMemoryAttach"},
+        {"linux-ppc64le",     "com.sun.jdi.SharedMemoryAttach"},
+        {"linux-s390x",       "com.sun.jdi.SharedMemoryAttach"},
+        {"linux-riscv64",     "com.sun.jdi.SharedMemoryAttach"},
+        {"linux-loongarch64", "com.sun.jdi.SharedMemoryAttach"},
+        {"macosx-amd64",      "com.sun.jdi.SharedMemoryAttach"},
+        {"mac-x64",           "com.sun.jdi.SharedMemoryAttach"},
+        {"macosx-aarch64",    "com.sun.jdi.SharedMemoryAttach"},
+        {"mac-aarch64",       "com.sun.jdi.SharedMemoryAttach"},
+        {"aix-ppc64",         "com.sun.jdi.SharedMemoryAttach"},
 
             // listening connectors
         /*
@@ -546,21 +553,22 @@ class CheckedFeatures {
          *  It is available only on the Microsoft Windows platform.
          *  "
          */
-        {"linux-i586",      "com.sun.jdi.SharedMemoryListen"},
-        {"linux-ia64",      "com.sun.jdi.SharedMemoryListen"},
-        {"linux-amd64",     "com.sun.jdi.SharedMemoryListen"},
-        {"linux-x64",       "com.sun.jdi.SharedMemoryListen"},
-        {"linux-aarch64",   "com.sun.jdi.SharedMemoryListen"},
-        {"linux-arm",       "com.sun.jdi.SharedMemoryListen"},
-        {"linux-ppc64",     "com.sun.jdi.SharedMemoryListen"},
-        {"linux-ppc64le",   "com.sun.jdi.SharedMemoryListen"},
-        {"linux-s390x",     "com.sun.jdi.SharedMemoryListen"},
-        {"linux-riscv64",   "com.sun.jdi.SharedMemoryListen"},
-        {"macosx-amd64",    "com.sun.jdi.SharedMemoryListen"},
-        {"mac-x64",         "com.sun.jdi.SharedMemoryListen"},
-        {"macosx-aarch64",  "com.sun.jdi.SharedMemoryListen"},
-        {"mac-aarch64",     "com.sun.jdi.SharedMemoryListen"},
-        {"aix-ppc64",       "com.sun.jdi.SharedMemoryListen"},
+        {"linux-i586",        "com.sun.jdi.SharedMemoryListen"},
+        {"linux-ia64",        "com.sun.jdi.SharedMemoryListen"},
+        {"linux-amd64",       "com.sun.jdi.SharedMemoryListen"},
+        {"linux-x64",         "com.sun.jdi.SharedMemoryListen"},
+        {"linux-aarch64",     "com.sun.jdi.SharedMemoryListen"},
+        {"linux-arm",         "com.sun.jdi.SharedMemoryListen"},
+        {"linux-ppc64",       "com.sun.jdi.SharedMemoryListen"},
+        {"linux-ppc64le",     "com.sun.jdi.SharedMemoryListen"},
+        {"linux-s390x",       "com.sun.jdi.SharedMemoryListen"},
+        {"linux-riscv64",     "com.sun.jdi.SharedMemoryListen"},
+        {"linux-loongarch64", "com.sun.jdi.SharedMemoryListen"},
+        {"macosx-amd64",      "com.sun.jdi.SharedMemoryListen"},
+        {"mac-x64",           "com.sun.jdi.SharedMemoryListen"},
+        {"macosx-aarch64",    "com.sun.jdi.SharedMemoryListen"},
+        {"mac-aarch64",       "com.sun.jdi.SharedMemoryListen"},
+        {"aix-ppc64",         "com.sun.jdi.SharedMemoryListen"},
 
             // launching connectors
         /*
@@ -575,78 +583,82 @@ class CheckedFeatures {
          *  Windows, the shared memory transport is used. On Linux the socket transport is used.
          * "
          */
-        {"linux-i586",      "com.sun.jdi.CommandLineLaunch", "dt_shmem"},
-        {"linux-i586",      "com.sun.jdi.RawCommandLineLaunch", "dt_shmem"},
+        {"linux-i586",        "com.sun.jdi.CommandLineLaunch", "dt_shmem"},
+        {"linux-i586",        "com.sun.jdi.RawCommandLineLaunch", "dt_shmem"},
 
-        {"linux-ia64",      "com.sun.jdi.CommandLineLaunch", "dt_shmem"},
-        {"linux-ia64",      "com.sun.jdi.RawCommandLineLaunch", "dt_shmem"},
+        {"linux-ia64",        "com.sun.jdi.CommandLineLaunch", "dt_shmem"},
+        {"linux-ia64",        "com.sun.jdi.RawCommandLineLaunch", "dt_shmem"},
 
-        {"linux-amd64",     "com.sun.jdi.CommandLineLaunch", "dt_shmem"},
-        {"linux-amd64",     "com.sun.jdi.RawCommandLineLaunch", "dt_shmem"},
+        {"linux-amd64",       "com.sun.jdi.CommandLineLaunch", "dt_shmem"},
+        {"linux-amd64",       "com.sun.jdi.RawCommandLineLaunch", "dt_shmem"},
 
-        {"linux-x64",       "com.sun.jdi.CommandLineLaunch", "dt_shmem"},
-        {"linux-x64",       "com.sun.jdi.RawCommandLineLaunch", "dt_shmem"},
+        {"linux-x64",         "com.sun.jdi.CommandLineLaunch", "dt_shmem"},
+        {"linux-x64",         "com.sun.jdi.RawCommandLineLaunch", "dt_shmem"},
 
-        {"linux-aarch64",   "com.sun.jdi.CommandLineLaunch", "dt_shmem"},
-        {"linux-aarch64",   "com.sun.jdi.RawCommandLineLaunch", "dt_shmem"},
+        {"linux-aarch64",     "com.sun.jdi.CommandLineLaunch", "dt_shmem"},
+        {"linux-aarch64",     "com.sun.jdi.RawCommandLineLaunch", "dt_shmem"},
 
-        {"linux-arm",       "com.sun.jdi.CommandLineLaunch", "dt_shmem"},
-        {"linux-arm",       "com.sun.jdi.RawCommandLineLaunch", "dt_shmem"},
+        {"linux-arm",         "com.sun.jdi.CommandLineLaunch", "dt_shmem"},
+        {"linux-arm",         "com.sun.jdi.RawCommandLineLaunch", "dt_shmem"},
 
-        {"linux-ppc64",     "com.sun.jdi.CommandLineLaunch", "dt_shmem"},
-        {"linux-ppc64",     "com.sun.jdi.RawCommandLineLaunch", "dt_shmem"},
+        {"linux-ppc64",       "com.sun.jdi.CommandLineLaunch", "dt_shmem"},
+        {"linux-ppc64",       "com.sun.jdi.RawCommandLineLaunch", "dt_shmem"},
 
-        {"linux-ppc64le",   "com.sun.jdi.CommandLineLaunch", "dt_shmem"},
-        {"linux-ppc64le",   "com.sun.jdi.RawCommandLineLaunch", "dt_shmem"},
+        {"linux-ppc64le",     "com.sun.jdi.CommandLineLaunch", "dt_shmem"},
+        {"linux-ppc64le",     "com.sun.jdi.RawCommandLineLaunch", "dt_shmem"},
 
-        {"linux-s390x",     "com.sun.jdi.CommandLineLaunch", "dt_shmem"},
-        {"linux-s390x",     "com.sun.jdi.RawCommandLineLaunch", "dt_shmem"},
+        {"linux-s390x",       "com.sun.jdi.CommandLineLaunch", "dt_shmem"},
+        {"linux-s390x",       "com.sun.jdi.RawCommandLineLaunch", "dt_shmem"},
 
-        {"linux-riscv64",   "com.sun.jdi.CommandLineLaunch", "dt_shmem"},
-        {"linux-riscv64",   "com.sun.jdi.RawCommandLineLaunch", "dt_shmem"},
+        {"linux-riscv64",     "com.sun.jdi.CommandLineLaunch", "dt_shmem"},
+        {"linux-riscv64",     "com.sun.jdi.RawCommandLineLaunch", "dt_shmem"},
 
-        {"windows-i586",    "com.sun.jdi.CommandLineLaunch", "dt_socket"},
-        {"windows-i586",    "com.sun.jdi.RawCommandLineLaunch", "dt_socket"},
+        {"linux-loongarch64", "com.sun.jdi.CommandLineLaunch", "dt_shmem"},
+        {"linux-loongarch64", "com.sun.jdi.RawCommandLineLaunch", "dt_shmem"},
 
-        {"windows-ia64",    "com.sun.jdi.CommandLineLaunch", "dt_socket"},
-        {"windows-ia64",    "com.sun.jdi.RawCommandLineLaunch", "dt_socket"},
+        {"windows-i586",      "com.sun.jdi.CommandLineLaunch", "dt_socket"},
+        {"windows-i586",      "com.sun.jdi.RawCommandLineLaunch", "dt_socket"},
 
-        {"windows-amd64",   "com.sun.jdi.CommandLineLaunch", "dt_socket"},
-        {"windows-amd64",   "com.sun.jdi.RawCommandLineLaunch", "dt_socket"},
+        {"windows-ia64",      "com.sun.jdi.CommandLineLaunch", "dt_socket"},
+        {"windows-ia64",      "com.sun.jdi.RawCommandLineLaunch", "dt_socket"},
 
-        {"windows-x64",     "com.sun.jdi.CommandLineLaunch", "dt_socket"},
-        {"windows-x64",     "com.sun.jdi.RawCommandLineLaunch", "dt_socket"},
+        {"windows-amd64",     "com.sun.jdi.CommandLineLaunch", "dt_socket"},
+        {"windows-amd64",     "com.sun.jdi.RawCommandLineLaunch", "dt_socket"},
 
-        {"macosx-amd64",     "com.sun.jdi.CommandLineLaunch", "dt_shmem"},
-        {"macosx-amd64",     "com.sun.jdi.RawCommandLineLaunch", "dt_shmem"},
+        {"windows-x64",       "com.sun.jdi.CommandLineLaunch", "dt_socket"},
+        {"windows-x64",       "com.sun.jdi.RawCommandLineLaunch", "dt_socket"},
 
-        {"mac-x64",          "com.sun.jdi.CommandLineLaunch", "dt_shmem"},
-        {"mac-x64",          "com.sun.jdi.RawCommandLineLaunch", "dt_shmem"},
+        {"macosx-amd64",      "com.sun.jdi.CommandLineLaunch", "dt_shmem"},
+        {"macosx-amd64",      "com.sun.jdi.RawCommandLineLaunch", "dt_shmem"},
 
-        {"macosx-aarch64",   "com.sun.jdi.CommandLineLaunch", "dt_shmem"},
-        {"macosx-aarch64",   "com.sun.jdi.RawCommandLineLaunch", "dt_shmem"},
+        {"mac-x64",           "com.sun.jdi.CommandLineLaunch", "dt_shmem"},
+        {"mac-x64",           "com.sun.jdi.RawCommandLineLaunch", "dt_shmem"},
 
-        {"mac-aarch64",      "com.sun.jdi.CommandLineLaunch", "dt_shmem"},
-        {"mac-aarch64",      "com.sun.jdi.RawCommandLineLaunch", "dt_shmem"},
+        {"macosx-aarch64",    "com.sun.jdi.CommandLineLaunch", "dt_shmem"},
+        {"macosx-aarch64",    "com.sun.jdi.RawCommandLineLaunch", "dt_shmem"},
 
-        {"aix-ppc64",       "com.sun.jdi.CommandLineLaunch", "dt_shmem"},
-        {"aix-ppc64",       "com.sun.jdi.RawCommandLineLaunch", "dt_shmem"},
+        {"mac-aarch64",       "com.sun.jdi.CommandLineLaunch", "dt_shmem"},
+        {"mac-aarch64",       "com.sun.jdi.RawCommandLineLaunch", "dt_shmem"},
+
+        {"aix-ppc64",         "com.sun.jdi.CommandLineLaunch", "dt_shmem"},
+        {"aix-ppc64",         "com.sun.jdi.RawCommandLineLaunch", "dt_shmem"},
 
         // shared memory transport is implemented only on windows platform
-        {"linux-i586",      "dt_shmem"},
-        {"linux-ia64",      "dt_shmem"},
-        {"linux-amd64",     "dt_shmem"},
-        {"linux-x64",       "dt_shmem"},
-        {"linux-aarch64",   "dt_shmem"},
-        {"linux-arm",       "dt_shmem"},
-        {"linux-ppc64",     "dt_shmem"},
-        {"linux-ppc64le",   "dt_shmem"},
-        {"linux-s390x",     "dt_shmem"},
-        {"linux-riscv64",   "dt_shmem"},
-        {"macosx-amd64",    "dt_shmem"},
-        {"mac-x64",         "dt_shmem"},
-        {"macosx-aarch64",  "dt_shmem"},
-        {"mac-aarch64",     "dt_shmem"},
-        {"aix-ppc64",       "dt_shmem"},
+        {"linux-i586",        "dt_shmem"},
+        {"linux-ia64",        "dt_shmem"},
+        {"linux-amd64",       "dt_shmem"},
+        {"linux-x64",         "dt_shmem"},
+        {"linux-aarch64",     "dt_shmem"},
+        {"linux-arm",         "dt_shmem"},
+        {"linux-ppc64",       "dt_shmem"},
+        {"linux-ppc64le",     "dt_shmem"},
+        {"linux-s390x",       "dt_shmem"},
+        {"linux-riscv64",     "dt_shmem"},
+        {"linux-loongarch64", "dt_shmem"},
+        {"macosx-amd64",      "dt_shmem"},
+        {"mac-x64",           "dt_shmem"},
+        {"macosx-aarch64",    "dt_shmem"},
+        {"mac-aarch64",       "dt_shmem"},
+        {"aix-ppc64",         "dt_shmem"},
     };
 }

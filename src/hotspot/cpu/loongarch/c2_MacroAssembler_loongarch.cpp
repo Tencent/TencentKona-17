@@ -195,7 +195,7 @@ void C2_MacroAssembler::fast_lock(Register objReg, Register boxReg, Register res
 
   if (PrintBiasedLockingStatistics) {
     Label SUCC, FAIL;
-    cmpxchg(Address(objReg, 0), tmpReg, boxReg, scrReg, true, false, SUCC, &FAIL); // Updates tmpReg
+    cmpxchg(Address(objReg, 0), tmpReg, boxReg, scrReg, true, true /* acquire */, SUCC, &FAIL); // Updates tmpReg
     bind(SUCC);
     atomic_inc32((address)BiasedLocking::fast_path_entry_count_addr(), 1, AT, scrReg);
     li(resReg, 1);
@@ -203,7 +203,7 @@ void C2_MacroAssembler::fast_lock(Register objReg, Register boxReg, Register res
     bind(FAIL);
   } else {
     // If cmpxchg is succ, then scrReg = 1
-    cmpxchg(Address(objReg, 0), tmpReg, boxReg, scrReg, true, false, DONE_SET); // Updates tmpReg
+    cmpxchg(Address(objReg, 0), tmpReg, boxReg, scrReg, true, true /* acquire */, DONE_SET); // Updates tmpReg
   }
 
   // Recursive locking
@@ -248,7 +248,7 @@ void C2_MacroAssembler::fast_lock(Register objReg, Register boxReg, Register res
 #endif
   // It's inflated and appears unlocked
   addi_d(tmpReg, tmpReg, ObjectMonitor::owner_offset_in_bytes() - 2);
-  cmpxchg(Address(tmpReg, 0), R0, TREG, scrReg, false, false);
+  cmpxchg(Address(tmpReg, 0), R0, TREG, scrReg, false, true /* acquire */);
   // Intentional fall-through into DONE ...
 
   bind(DONE_SET);
@@ -374,7 +374,7 @@ void C2_MacroAssembler::fast_unlock(Register objReg, Register boxReg, Register r
 
   bind(Stacked);
   ld_d(tmpReg, Address(boxReg, 0));
-  cmpxchg(Address(objReg, 0), boxReg, tmpReg, AT, false, false);
+  cmpxchg(Address(objReg, 0), boxReg, tmpReg, AT, false, true /* acquire */);
 
   bind(DONE_SET);
   move(resReg, AT);
