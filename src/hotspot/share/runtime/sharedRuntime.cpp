@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2022, These
+ * modifications are Copyright (c) 2018, 2022, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #include "precompiled.hpp"
 #include "classfile/javaClasses.hpp"
 #include "jvm.h"
@@ -3054,7 +3060,7 @@ void AdapterHandlerLibrary::create_native_wrapper(const methodHandle& method) {
       CodeBuffer buffer(buf);
       struct { double data[20]; } locs_buf;
       buffer.insts()->initialize_shared_locs((relocInfo*)&locs_buf, sizeof(locs_buf) / sizeof(relocInfo));
-#if defined(AARCH64)
+#if defined(AARCH64) || defined(LOONGARCH64)
       // On AArch64 with ZGC and nmethod entry barriers, we need all oops to be
       // in the constant pool to ensure ordering between the barrier and oops
       // accesses. For native_wrappers we need a constant.

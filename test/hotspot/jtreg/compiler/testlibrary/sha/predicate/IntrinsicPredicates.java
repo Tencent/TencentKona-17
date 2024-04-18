@@ -21,6 +21,12 @@
  * questions.
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2022, These
+ * modifications are Copyright (c) 2021, 2022, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 package compiler.testlibrary.sha.predicate;
 
 import jdk.test.lib.Platform;
@@ -61,19 +67,22 @@ public class IntrinsicPredicates {
 
     public static final BooleanSupplier MD5_INSTRUCTION_AVAILABLE
             = new OrPredicate(new CPUSpecificPredicate("aarch64.*", null, null),
+              new OrPredicate(new CPUSpecificPredicate("loongarch64.*", null, null),
               // x86 variants
               new OrPredicate(new CPUSpecificPredicate("amd64.*",   null, null),
               new OrPredicate(new CPUSpecificPredicate("i386.*",    null, null),
-                              new CPUSpecificPredicate("x86.*",     null, null))));
+                              new CPUSpecificPredicate("x86.*",     null, null)))));
 
     public static final BooleanSupplier SHA1_INSTRUCTION_AVAILABLE
             = new OrPredicate(new CPUSpecificPredicate("aarch64.*", new String[] { "sha1" }, null),
               new OrPredicate(new CPUSpecificPredicate("riscv64.*", new String[] { "sha1" }, null),
               new OrPredicate(new CPUSpecificPredicate("s390.*",    new String[] { "sha1" }, null),
+              // Basic instructions are used to implement SHA1 Intrinsics on LA, so "sha1" feature is not needed.
+              new OrPredicate(new CPUSpecificPredicate("loongarch64.*", null, null),
               // x86 variants
               new OrPredicate(new CPUSpecificPredicate("amd64.*",   new String[] { "sha" },  null),
               new OrPredicate(new CPUSpecificPredicate("i386.*",    new String[] { "sha" },  null),
-                              new CPUSpecificPredicate("x86.*",     new String[] { "sha" },  null))))));
+                              new CPUSpecificPredicate("x86.*",     new String[] { "sha" },  null)))))));
 
     public static final BooleanSupplier SHA256_INSTRUCTION_AVAILABLE
             = new OrPredicate(new CPUSpecificPredicate("aarch64.*", new String[] { "sha256"       }, null),
@@ -81,12 +90,14 @@ public class IntrinsicPredicates {
               new OrPredicate(new CPUSpecificPredicate("s390.*",    new String[] { "sha256"       }, null),
               new OrPredicate(new CPUSpecificPredicate("ppc64.*",   new String[] { "sha"          }, null),
               new OrPredicate(new CPUSpecificPredicate("ppc64le.*", new String[] { "sha"          }, null),
+              // Basic instructions are used to implement SHA256 Intrinsics on LA, so "sha256" feature is not needed.
+              new OrPredicate(new CPUSpecificPredicate("loongarch64.*", null, null),
               // x86 variants
               new OrPredicate(new CPUSpecificPredicate("amd64.*",   new String[] { "sha"          }, null),
               new OrPredicate(new CPUSpecificPredicate("i386.*",    new String[] { "sha"          }, null),
               new OrPredicate(new CPUSpecificPredicate("x86.*",     new String[] { "sha"          }, null),
               new OrPredicate(new CPUSpecificPredicate("amd64.*",   new String[] { "avx2", "bmi2" }, null),
-                              new CPUSpecificPredicate("x86_64",    new String[] { "avx2", "bmi2" }, null))))))))));
+                              new CPUSpecificPredicate("x86_64",    new String[] { "avx2", "bmi2" }, null)))))))))));
 
     public static final BooleanSupplier SHA512_INSTRUCTION_AVAILABLE
             = new OrPredicate(new CPUSpecificPredicate("aarch64.*", new String[] { "sha512"       }, null),

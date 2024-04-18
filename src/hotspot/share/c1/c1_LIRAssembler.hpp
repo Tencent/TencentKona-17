@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2023, These
+ * modifications are Copyright (c) 2022, 2023, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #ifndef SHARE_C1_C1_LIRASSEMBLER_HPP
 #define SHARE_C1_C1_LIRASSEMBLER_HPP
 
@@ -186,7 +192,7 @@ class LIR_Assembler: public CompilationResourceObj {
   void emit_op1(LIR_Op1* op);
   void emit_op2(LIR_Op2* op);
   void emit_op3(LIR_Op3* op);
-#ifdef RISCV
+#if defined(RISCV) || defined(LOONGARCH)
   void emit_op4(LIR_Op4* op);
 #endif
   void emit_opBranch(LIR_OpBranch* op);
@@ -222,7 +228,7 @@ class LIR_Assembler: public CompilationResourceObj {
   void volatile_move_op(LIR_Opr src, LIR_Opr result, BasicType type, CodeEmitInfo* info);
   void comp_mem_op(LIR_Opr src, LIR_Opr result, BasicType type, CodeEmitInfo* info);  // info set for null exceptions
   void comp_fl2i(LIR_Code code, LIR_Opr left, LIR_Opr right, LIR_Opr result, LIR_Op2* op);
-#ifdef RISCV
+#if defined(RISCV) || defined(LOONGARCH)
   void cmove(LIR_Condition code, LIR_Opr left, LIR_Opr right, LIR_Opr result, BasicType type,
              LIR_Opr cmp_opr1 = LIR_OprFact::illegalOpr, LIR_Opr cmp_opr2 = LIR_OprFact::illegalOpr);
 #else

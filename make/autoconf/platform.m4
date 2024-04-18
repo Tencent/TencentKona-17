@@ -23,6 +23,12 @@
 # questions.
 #
 
+#
+# This file has been modified by Loongson Technology in 2021. These
+# modifications are Copyright (c) 2018, 2021, Loongson Technology, and are made
+# available on the same license terms set forth above.
+#
+
 # Support macro for PLATFORM_EXTRACT_TARGET_AND_BUILD.
 # Converts autoconf style CPU name to OpenJDK style, into
 # VAR_CPU, VAR_CPU_ARCH, VAR_CPU_BITS and VAR_CPU_ENDIAN.
@@ -539,11 +545,26 @@ AC_DEFUN([PLATFORM_SETUP_LEGACY_VARS_HELPER],
     HOTSPOT_$1_CPU=ppc_64
   elif test "x$OPENJDK_$1_CPU" = xppc64le; then
     HOTSPOT_$1_CPU=ppc_64
+  elif test "x$OPENJDK_$1_CPU" = xmips64; then
+    HOTSPOT_$1_CPU=mips_64
+  elif test "x$OPENJDK_$1_CPU" = xmips64el; then
+    HOTSPOT_$1_CPU=mips_64
+  elif test "x$OPENJDK_$1_CPU" = xloongarch; then
+    HOTSPOT_$1_CPU=loongarch_64
+  elif test "x$OPENJDK_$1_CPU" = xloongarch64; then
+    HOTSPOT_$1_CPU=loongarch_64
   fi
   AC_SUBST(HOTSPOT_$1_CPU)
 
   # This is identical with OPENJDK_*, but define anyway for consistency.
   HOTSPOT_$1_CPU_ARCH=${OPENJDK_$1_CPU_ARCH}
+  # Override hotspot cpu definitions for MIPS platforms
+  if test "x$OPENJDK_$1_CPU" = xmips64el; then
+    HOTSPOT_TARGET_CPU_ARCH=mips
+  elif test "x$OPENJDK_$1_CPU" = xloongarch64; then
+    HOTSPOT_TARGET_CPU_ARCH=loongarch
+  fi
+
   AC_SUBST(HOTSPOT_$1_CPU_ARCH)
 
   # Setup HOTSPOT_$1_CPU_DEFINE
@@ -563,6 +584,12 @@ AC_DEFUN([PLATFORM_SETUP_LEGACY_VARS_HELPER],
     HOTSPOT_$1_CPU_DEFINE=PPC64
   elif test "x$OPENJDK_$1_CPU" = xriscv64; then
     HOTSPOT_$1_CPU_DEFINE=RISCV64
+  elif test "x$OPENJDK_$1_CPU" = xmips64; then
+    HOTSPOT_$1_CPU_DEFINE=MIPS64
+  elif test "x$OPENJDK_$1_CPU" = xmips64el; then
+    HOTSPOT_$1_CPU_DEFINE=MIPS64
+  elif test "x$OPENJDK_$1_CPU" = xloongarch64; then
+    HOTSPOT_$1_CPU_DEFINE=LOONGARCH64
 
   # The cpu defines below are for zero, we don't support them directly.
   elif test "x$OPENJDK_$1_CPU" = xsparc; then

@@ -89,6 +89,9 @@ CC 		= gcc
 endif
 CFLAGS		+= -O
 DLDFLAGS	+= -shared
+ifeq ($(ARCH), mips64)
+DLDFLAGS	+= -Wl,-z,noexecstack
+endif
 LDFLAGS         += -ldl
 OUTFLAGS	+= -o $@
 else

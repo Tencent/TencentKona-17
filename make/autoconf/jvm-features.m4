@@ -23,6 +23,12 @@
 # questions.
 #
 
+#
+# This file has been modified by Loongson Technology in 2021. These
+# modifications are Copyright (c) 2020, 2021, Loongson Technology, and are made
+# available on the same license terms set forth above.
+#
+
 ###############################################################################
 # Terminology used in this file:
 #
@@ -243,6 +249,23 @@ AC_DEFUN_ONCE([JVM_FEATURES_CHECK_CDS],
 ])
 
 ###############################################################################
+# Check if the feature 'compiler1' is available on this platform.
+#
+AC_DEFUN_ONCE([JVM_FEATURES_CHECK_COMPILER1],
+[
+  JVM_FEATURES_CHECK_AVAILABILITY(compiler1, [
+    AC_MSG_CHECKING([if platform is supported by COMPILER1])
+    if test "x$HOTSPOT_TARGET_CPU_ARCH" != "xmips"; then
+      # Disable compiler1 on mips
+      AC_MSG_RESULT([yes])
+    else
+      AC_MSG_RESULT([no, $OPENJDK_TARGET_OS])
+      AVAILABLE=false
+    fi
+  ])
+])
+
+###############################################################################
 # Check if the feature 'dtrace' is available on this platform.
 #
 AC_DEFUN_ONCE([JVM_FEATURES_CHECK_DTRACE],
@@ -295,6 +318,8 @@ AC_DEFUN_ONCE([JVM_FEATURES_CHECK_JVMCI],
       AC_MSG_RESULT([yes])
     elif test "x$OPENJDK_TARGET_CPU" = "xaarch64"; then
       AC_MSG_RESULT([yes])
+    elif test "x$OPENJDK_TARGET_CPU" = "xloongarch64"; then
+      AC_MSG_RESULT([yes])
     else
       AC_MSG_RESULT([no, $OPENJDK_TARGET_CPU])
       AVAILABLE=false
@@ -312,7 +337,8 @@ AC_DEFUN_ONCE([JVM_FEATURES_CHECK_SHENANDOAHGC],
     if test "x$OPENJDK_TARGET_CPU_ARCH" = "xx86" || \
         test "x$OPENJDK_TARGET_CPU" = "xaarch64" || \
         test "x$OPENJDK_TARGET_CPU" = "xppc64le" || \
-        test "x$OPENJDK_TARGET_CPU" = "xriscv64"; then
+        test "x$OPENJDK_TARGET_CPU" = "xriscv64" || \
+        test "x$OPENJDK_TARGET_CPU" = "xloongarch64"; then
       AC_MSG_RESULT([yes])
     else
       AC_MSG_RESULT([no, $OPENJDK_TARGET_CPU])
@@ -370,6 +396,13 @@ AC_DEFUN_ONCE([JVM_FEATURES_CHECK_ZGC],
         AC_MSG_RESULT([no, $OPENJDK_TARGET_OS-$OPENJDK_TARGET_CPU])
         AVAILABLE=false
       fi
+    elif test "x$OPENJDK_TARGET_CPU" = "xloongarch64"; then
+      if test "x$OPENJDK_TARGET_OS" = "xlinux"; then
+        AC_MSG_RESULT([yes])
+      else
+        AC_MSG_RESULT([no, $OPENJDK_TARGET_OS-$OPENJDK_TARGET_CPU])
+        AVAILABLE=false
+      fi
     else
       AC_MSG_RESULT([no, $OPENJDK_TARGET_OS-$OPENJDK_TARGET_CPU])
       AVAILABLE=false
@@ -404,6 +437,7 @@ AC_DEFUN_ONCE([JVM_FEATURES_PREPARE_PLATFORM],
   # JVM_FEATURES_PLATFORM_UNAVAILABLE.
 
   JVM_FEATURES_CHECK_CDS
+  JVM_FEATURES_CHECK_COMPILER1
   JVM_FEATURES_CHECK_DTRACE
   JVM_FEATURES_CHECK_JFR
   JVM_FEATURES_CHECK_JVMCI

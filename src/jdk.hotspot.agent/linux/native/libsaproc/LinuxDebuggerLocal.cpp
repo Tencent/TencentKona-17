@@ -23,6 +23,13 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2022. These
+ * modifications are Copyright (c) 2021, 2022, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ *
+ */
+
 #include <jni.h>
 #include "libproc.h"
 #include "proc_service.h"
@@ -62,6 +69,10 @@
 
 #ifdef riscv64
 #include "sun_jvm_hotspot_debugger_riscv64_RISCV64ThreadContext.h"
+#endif
+
+#ifdef loongarch64
+#include "sun_jvm_hotspot_debugger_loongarch64_LOONGARCH64ThreadContext.h"
 #endif
 
 class AutoJavaString {
@@ -412,7 +423,7 @@ JNIEXPORT jbyteArray JNICALL Java_sun_jvm_hotspot_debugger_linux_LinuxDebuggerLo
   return (err == PS_OK)? array : 0;
 }
 
-#if defined(i586) || defined(amd64) || defined(ppc64) || defined(ppc64le) || defined(aarch64) || defined(riscv64)
+#if defined(i586) || defined(amd64) || defined(ppc64) || defined(ppc64le) || defined(aarch64) || defined(riscv64) || defined(loongarch64)
 extern "C"
 JNIEXPORT jlongArray JNICALL Java_sun_jvm_hotspot_debugger_linux_LinuxDebuggerLocal_getThreadIntegerRegisterSet0
   (JNIEnv *env, jobject this_obj, jint lwp_id) {
@@ -446,6 +457,9 @@ JNIEXPORT jlongArray JNICALL Java_sun_jvm_hotspot_debugger_linux_LinuxDebuggerLo
 #endif
 #ifdef riscv64
 #define NPRGREG sun_jvm_hotspot_debugger_riscv64_RISCV64ThreadContext_NPRGREG
+#endif
+#ifdef loongarch64
+#define NPRGREG sun_jvm_hotspot_debugger_loongarch64_LOONGARCH64ThreadContext_NPRGREG
 #endif
 #if defined(ppc64) || defined(ppc64le)
 #define NPRGREG sun_jvm_hotspot_debugger_ppc64_PPC64ThreadContext_NPRGREG
@@ -560,6 +574,18 @@ JNIEXPORT jlongArray JNICALL Java_sun_jvm_hotspot_debugger_linux_LinuxDebuggerLo
   regs[REG_INDEX(R31)]  = gregs.t6;
 
 #endif /* riscv64 */
+
+#if defined(loongarch64)
+
+#define REG_INDEX(reg) sun_jvm_hotspot_debugger_loongarch64_LOONGARCH64ThreadContext_##reg
+
+  {
+    int i;
+    for (i = 0; i < 31; i++)
+      regs[i] = gregs.regs[i];
+    regs[REG_INDEX(PC)] = gregs.csr_era;
+  }
+#endif /* loongarch64 */
 
 #if defined(ppc64) || defined(ppc64le)
 #define REG_INDEX(reg) sun_jvm_hotspot_debugger_ppc64_PPC64ThreadContext_##reg

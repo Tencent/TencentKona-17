@@ -21,6 +21,12 @@
  * questions.
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2021, These
+ * modifications are Copyright (c) 2021, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 package compiler.intrinsics.sha.cli.testcases;
 
 import compiler.intrinsics.sha.cli.DigestOptionsBase;
@@ -32,7 +38,7 @@ import jdk.test.lib.cli.predicate.OrPredicate;
 
 /**
  * Generic test case for SHA-related options targeted to any CPU except
- * AArch64, RISCV64, PPC, S390x, and X86.
+ * AArch64, RISCV64, PPC, S390x, LoongArch64, and X86.
  */
 public class GenericTestCaseForOtherCPU extends
         DigestOptionsBase.TestCase {
@@ -44,14 +50,15 @@ public class GenericTestCaseForOtherCPU extends
     }
 
     public GenericTestCaseForOtherCPU(String optionName, boolean checkUseSHA) {
-        // Execute the test case on any CPU except AArch64, RISCV64, PPC, S390x, and X86.
+        // Execute the test case on any CPU except AArch64, RISCV64, PPC, S390x, LoongArch64, and X86.
         super(optionName, new NotPredicate(
                               new OrPredicate(Platform::isAArch64,
                               new OrPredicate(Platform::isRISCV64,
                               new OrPredicate(Platform::isS390x,
                               new OrPredicate(Platform::isPPC,
+                              new OrPredicate(Platform::isLoongArch64,
                               new OrPredicate(Platform::isX64,
-                                              Platform::isX86)))))));
+                                              Platform::isX86))))))));
 
         this.checkUseSHA = checkUseSHA;
     }

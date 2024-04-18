@@ -23,6 +23,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2021. These
+ * modifications are Copyright (c) 2019, 2021, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #include "precompiled.hpp"
 #include "cds/metaspaceShared.hpp"
 #include "classfile/classLoaderData.hpp"
@@ -587,12 +593,15 @@ bool Metaspace::class_space_is_initialized() {
 // On error, returns an unreserved space.
 ReservedSpace Metaspace::reserve_address_space_for_compressed_classes(size_t size) {
 
-#if defined(AARCH64) || defined(PPC64)
+#if defined(AARCH64) || defined(PPC64) || defined(MIPS64) || defined(LOONGARCH64)
   const size_t alignment = Metaspace::reserve_alignment();
 
   // AArch64: Try to align metaspace class space so that we can decode a
   // compressed klass with a single MOVK instruction. We can do this iff the
   // compressed class base is a multiple of 4G.
+
+  // MIPS: Cannot mmap for 1G space at 4G position, and prepare for future optimization.
+
   // Additionally, above 32G, ensure the lower LogKlassAlignmentInBytes bits
   // of the upper 32-bits of the address are zero so we can handle a shift
   // when decoding.
@@ -649,16 +658,16 @@ ReservedSpace Metaspace::reserve_address_space_for_compressed_classes(size_t siz
       return rs;
     }
   }
-#endif // defined(AARCH64) || defined(PPC64)
+#endif // defined(AARCH64) || defined(PPC64) || defined(MIPS64) || defined(LOONGARCH64)
 
-#ifdef AARCH64
+#if defined(AARCH64) || defined(MIPS64) || defined(LOONGARCH64)
   // Note: on AARCH64, if the code above does not find any good placement, we
   // have no recourse. We return an empty space and the VM will exit.
   return ReservedSpace();
 #else
   // Default implementation: Just reserve anywhere.
   return ReservedSpace(size, Metaspace::reserve_alignment(), os::vm_page_size(), (char*)NULL);
-#endif // AARCH64
+#endif // defined(AARCH64) || defined(MIPS64) || defined(LOONGARCH64)
 }
 
 #endif // _LP64

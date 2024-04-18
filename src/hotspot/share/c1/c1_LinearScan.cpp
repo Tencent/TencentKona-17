@@ -35,6 +35,12 @@
 #include "runtime/timerTrace.hpp"
 #include "utilities/bitMap.inline.hpp"
 
+/*
+ * This file has been modified by Loongson Technology in 2023, These
+ * modifications are Copyright (c) 2022, 2023, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #ifndef PRODUCT
 
   static LinearScanStatistic _stat_before_alloc;
@@ -1240,7 +1246,7 @@ void LinearScan::add_register_hints(LIR_Op* op) {
       break;
     }
     case lir_cmove: {
-#ifdef RISCV
+#if defined(RISCV) || defined(LOONGARCH)
       assert(op->as_Op4() != NULL, "lir_cmove must be LIR_Op4");
       LIR_Op4* cmove = (LIR_Op4*)op;
 #else
@@ -3151,7 +3157,7 @@ void LinearScan::do_linear_scan() {
     }
   }
 
-#ifndef RISCV
+#if !defined(RISCV) && !defined(LOONGARCH)
   // Disable these optimizations on riscv temporarily, because it does not
   // work when the comparison operands are bound to branches or cmoves.
   { TIME_LINEAR_SCAN(timer_optimize_lir);
@@ -6385,7 +6391,7 @@ void ControlFlowOptimizer::delete_unnecessary_jumps(BlockList* code) {
               // There might be a cmove inserted for profiling which depends on the same
               // compare. If we change the condition of the respective compare, we have
               // to take care of this cmove as well.
-#ifdef RISCV
+#if defined(RISCV) || defined(LOONGARCH)
               LIR_Op4* prev_cmove = NULL;
 #else
               LIR_Op2* prev_cmove = NULL;
@@ -6395,7 +6401,7 @@ void ControlFlowOptimizer::delete_unnecessary_jumps(BlockList* code) {
                 prev_op = instructions->at(j);
                 // check for the cmove
                 if (prev_op->code() == lir_cmove) {
-#ifdef RISCV
+#if defined(RISCV) || defined(LOONGARCH)
                   assert(prev_op->as_Op4() != NULL, "cmove must be of type LIR_Op4");
                   prev_cmove = (LIR_Op4*)prev_op;
 #else

@@ -21,10 +21,16 @@
  * questions.
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2022, These
+ * modifications are Copyright (c) 2022, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 /**
  * @test
  * @requires vm.jvmci
- * @requires vm.simpleArch == "x64" | vm.simpleArch == "aarch64"
+ * @requires vm.simpleArch == "x64" | vm.simpleArch == "aarch64" | vm.simpleArch == "loongarch64"
  * @library /test/lib /
  * @modules jdk.internal.vm.ci/jdk.vm.ci.hotspot
  *          jdk.internal.vm.ci/jdk.vm.ci.code
@@ -33,8 +39,9 @@
  *          jdk.internal.vm.ci/jdk.vm.ci.runtime
  *          jdk.internal.vm.ci/jdk.vm.ci.common
  *          jdk.internal.vm.ci/jdk.vm.ci.aarch64
+ *          jdk.internal.vm.ci/jdk.vm.ci.loongarch64
  *          jdk.internal.vm.ci/jdk.vm.ci.amd64
- * @compile CodeInstallationTest.java TestHotSpotVMConfig.java NativeCallTest.java TestAssembler.java amd64/AMD64TestAssembler.java aarch64/AArch64TestAssembler.java
+ * @compile CodeInstallationTest.java TestHotSpotVMConfig.java NativeCallTest.java TestAssembler.java amd64/AMD64TestAssembler.java aarch64/AArch64TestAssembler.java loongarch64/LoongArch64TestAssembler.java
  * @run junit/othervm/native -XX:+UnlockExperimentalVMOptions -XX:+EnableJVMCI  -Xbootclasspath/a:. jdk.vm.ci.code.test.NativeCallTest
  */
 package jdk.vm.ci.code.test;

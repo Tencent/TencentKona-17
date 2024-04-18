@@ -21,6 +21,12 @@
  * questions.
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2022, These
+ * modifications are Copyright (c) 2022, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 package ir_framework.tests;
 
 import compiler.lib.ir_framework.*;
@@ -215,7 +221,7 @@ public class TestIRMatching {
         runCheck(BadFailOnConstraint.create(Membar.class, "membar()", 1, "MemBar"));
 
         String cmp;
-        if (Platform.isPPC() || Platform.isX86()) {
+        if (Platform.isPPC() || Platform.isX86() || Platform.isLoongArch64()) {
             cmp = "CMP";
         } else if (Platform.isS390x()){
             cmp = "CLFI";

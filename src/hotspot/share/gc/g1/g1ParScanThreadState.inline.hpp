@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2021, These
+ * modifications are Copyright (c) 2021, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #ifndef SHARE_GC_G1_G1PARSCANTHREADSTATE_INLINE_HPP
 #define SHARE_GC_G1_G1PARSCANTHREADSTATE_INLINE_HPP
 
@@ -58,6 +64,9 @@ void G1ParScanThreadState::trim_queue_partially() {
 void G1ParScanThreadState::trim_queue() {
   trim_queue_to_threshold(0);
   assert(_task_queue->overflow_empty(), "invariant");
+  // Load of _age._fields._top in trim_queue_to_threshold must not pass
+  // the load of _age._fields._top in assert _task_queue->taskqueue_empty().
+  DEBUG_ONLY(OrderAccess::loadload();)
   assert(_task_queue->taskqueue_empty(), "invariant");
 }
 
