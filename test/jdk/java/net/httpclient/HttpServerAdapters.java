@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -227,6 +227,7 @@ public interface HttpServerAdapters {
         public abstract URI getRequestURI();
         public abstract String getRequestMethod();
         public abstract void close();
+        public abstract InetSocketAddress getRemoteAddress();
         public void serverPush(URI uri, HttpHeaders headers, byte[] body) {
             ByteArrayInputStream bais = new ByteArrayInputStream(body);
             serverPush(uri, headers, bais);
@@ -284,6 +285,12 @@ public interface HttpServerAdapters {
             }
             @Override
             public void close() { exchange.close(); }
+
+            @Override
+            public InetSocketAddress getRemoteAddress() {
+                return exchange.getRemoteAddress();
+            }
+
             @Override
             public URI getRequestURI() { return exchange.getRequestURI(); }
             @Override
@@ -339,6 +346,12 @@ public interface HttpServerAdapters {
             }
             @Override
             public void close() { exchange.close();}
+
+            @Override
+            public InetSocketAddress getRemoteAddress() {
+                return exchange.getRemoteAddress();
+            }
+
             @Override
             public URI getRequestURI() { return exchange.getRequestURI(); }
             @Override
@@ -517,8 +530,15 @@ public interface HttpServerAdapters {
         public abstract Version getVersion();
 
         public String serverAuthority() {
-            return InetAddress.getLoopbackAddress().getHostName() + ":"
-                    + getAddress().getPort();
+            InetSocketAddress address = getAddress();
+            String hostString = address.getHostString();
+            hostString = address.getAddress().isLoopbackAddress() || hostString.equals("localhost")
+                    ? address.getAddress().getHostAddress() // use the raw IP address, if loopback
+                    : hostString; // use whatever host string was used to construct the address
+            hostString = hostString.contains(":")
+                    ? "[" + hostString + "]"
+                    : hostString;
+            return hostString + ":" + address.getPort();
         }
 
         public static HttpTestServer of(HttpServer server) {

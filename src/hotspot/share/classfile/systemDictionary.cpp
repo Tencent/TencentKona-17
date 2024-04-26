@@ -571,7 +571,6 @@ InstanceKlass* SystemDictionary::handle_parallel_loading(JavaThread* current,
 void SystemDictionary::post_class_load_event(EventClassLoad* event, const InstanceKlass* k, const ClassLoaderData* init_cld) {
   assert(event != NULL, "invariant");
   assert(k != NULL, "invariant");
-  assert(event->should_commit(), "invariant");
   event->set_loadedClass(k);
   event->set_definingClassLoader(k->class_loader_data());
   event->set_initiatingClassLoader(init_cld);
@@ -1847,8 +1846,8 @@ bool SystemDictionary::add_loader_constraint(Symbol* class_name,
 // Add entry to resolution error table to record the error when the first
 // attempt to resolve a reference to a class has failed.
 void SystemDictionary::add_resolution_error(const constantPoolHandle& pool, int which,
-                                            Symbol* error, Symbol* message,
-                                            Symbol* cause, Symbol* cause_msg) {
+                                            Symbol* error, const char* message,
+                                            Symbol* cause, const char* cause_msg) {
   unsigned int hash = resolution_errors()->compute_hash(pool, which);
   int index = resolution_errors()->hash_to_index(hash);
   {
@@ -1867,7 +1866,7 @@ void SystemDictionary::delete_resolution_error(ConstantPool* pool) {
 
 // Lookup resolution error table. Returns error if found, otherwise NULL.
 Symbol* SystemDictionary::find_resolution_error(const constantPoolHandle& pool, int which,
-                                                Symbol** message, Symbol** cause, Symbol** cause_msg) {
+                                                const char** message, Symbol** cause, const char** cause_msg) {
   unsigned int hash = resolution_errors()->compute_hash(pool, which);
   int index = resolution_errors()->hash_to_index(hash);
   {
