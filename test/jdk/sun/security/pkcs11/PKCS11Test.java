@@ -552,6 +552,13 @@ public abstract class PKCS11Test {
             }
 
             curve = kcProp.substring(begin, end);
+
+            // Native ECDSA verification doesn't support curveSM2
+            if ("curveSM2".equalsIgnoreCase(curve)) {
+                System.out.print("\t " + curve + ": Unsupported\n");
+                continue;
+            }
+
             getSupportedECParameterSpec(curve, p)
                     .ifPresent(spec -> results.add(spec));
         }

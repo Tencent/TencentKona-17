@@ -1612,6 +1612,12 @@ abstract class GaloisCounterMode extends CipherSpi {
         }
     }
 
+    public static final class SM4 extends GaloisCounterMode {
+        public SM4() {
+            super(16, new SM4Crypt());
+        }
+    }
+
     /**
      * This class is for encryption when both GCTR and GHASH
      * can operation in parallel.
