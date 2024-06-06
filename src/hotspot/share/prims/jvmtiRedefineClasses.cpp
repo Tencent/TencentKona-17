@@ -1404,7 +1404,13 @@ jvmtiError VM_RedefineClasses::load_new_class_versions() {
 
     if (HAS_PENDING_EXCEPTION) {
       Symbol* ex_name = PENDING_EXCEPTION->klass()->name();
-      log_info(redefine, class, load, exceptions)("create_from_stream exception: '%s'", ex_name->as_C_string());
+      oop msg = java_lang_Throwable::message(PENDING_EXCEPTION);
+      char* ex_message = NULL;
+      if (msg != NULL) {
+        ex_message = java_lang_String::as_utf8_string(msg);
+      }
+      log_info(redefine, class, load, exceptions)("create_from_stream exception: '%s %s'", ex_name->as_C_string(),
+                                                  (ex_message == NULL ? "null" : ex_message));
       CLEAR_PENDING_EXCEPTION;
 
       if (ex_name == vmSymbols::java_lang_UnsupportedClassVersionError()) {
@@ -1473,7 +1479,13 @@ jvmtiError VM_RedefineClasses::load_new_class_versions() {
 
     if (HAS_PENDING_EXCEPTION) {
       Symbol* ex_name = PENDING_EXCEPTION->klass()->name();
-      log_info(redefine, class, load, exceptions)("verify_byte_codes exception: '%s'", ex_name->as_C_string());
+      oop msg = java_lang_Throwable::message(PENDING_EXCEPTION);
+      char* ex_message = NULL;
+      if (msg != NULL) {
+        ex_message = java_lang_String::as_utf8_string(msg);
+      }
+      log_info(redefine, class, load, exceptions)("verify_byte_codes exception: '%s %s'", ex_name->as_C_string(),
+                                                  (ex_message == NULL ? "null" : ex_message));
       CLEAR_PENDING_EXCEPTION;
       if (ex_name == vmSymbols::java_lang_OutOfMemoryError()) {
         return JVMTI_ERROR_OUT_OF_MEMORY;
@@ -1486,7 +1498,13 @@ jvmtiError VM_RedefineClasses::load_new_class_versions() {
     res = merge_cp_and_rewrite(the_class, scratch_class, THREAD);
     if (HAS_PENDING_EXCEPTION) {
       Symbol* ex_name = PENDING_EXCEPTION->klass()->name();
-      log_info(redefine, class, load, exceptions)("merge_cp_and_rewrite exception: '%s'", ex_name->as_C_string());
+      oop msg = java_lang_Throwable::message(PENDING_EXCEPTION);
+      char* ex_message = NULL;
+      if (msg != NULL) {
+        ex_message = java_lang_String::as_utf8_string(msg);
+      }
+      log_info(redefine, class, load, exceptions)("merge_cp_and_rewrite exception: '%s %s'", ex_name->as_C_string(),
+                                                  (ex_message == NULL ? "null" : ex_message));
       CLEAR_PENDING_EXCEPTION;
       if (ex_name == vmSymbols::java_lang_OutOfMemoryError()) {
         return JVMTI_ERROR_OUT_OF_MEMORY;
@@ -1505,8 +1523,14 @@ jvmtiError VM_RedefineClasses::load_new_class_versions() {
 
       if (HAS_PENDING_EXCEPTION) {
         Symbol* ex_name = PENDING_EXCEPTION->klass()->name();
+        oop msg = java_lang_Throwable::message(PENDING_EXCEPTION);
+        char* ex_message = NULL;
+        if (msg != NULL) {
+          ex_message = java_lang_String::as_utf8_string(msg);
+        }
         log_info(redefine, class, load, exceptions)
-          ("verify_byte_codes post merge-CP exception: '%s'", ex_name->as_C_string());
+          ("verify_byte_codes post merge-CP exception: '%s %s'", ex_name->as_C_string(),
+          (ex_message == NULL ? "null" : ex_message));
         CLEAR_PENDING_EXCEPTION;
         if (ex_name == vmSymbols::java_lang_OutOfMemoryError()) {
           return JVMTI_ERROR_OUT_OF_MEMORY;
@@ -1524,8 +1548,14 @@ jvmtiError VM_RedefineClasses::load_new_class_versions() {
     }
     if (HAS_PENDING_EXCEPTION) {
       Symbol* ex_name = PENDING_EXCEPTION->klass()->name();
+      oop msg = java_lang_Throwable::message(PENDING_EXCEPTION);
+      char* ex_message = NULL;
+      if (msg != NULL) {
+        ex_message = java_lang_String::as_utf8_string(msg);
+      }
       log_info(redefine, class, load, exceptions)
-        ("Rewriter::rewrite or link_methods exception: '%s'", ex_name->as_C_string());
+        ("Rewriter::rewrite or link_methods exception: '%s %s'", ex_name->as_C_string(),
+        (ex_message == NULL ? "null" : ex_message));
       CLEAR_PENDING_EXCEPTION;
       if (ex_name == vmSymbols::java_lang_OutOfMemoryError()) {
         return JVMTI_ERROR_OUT_OF_MEMORY;
