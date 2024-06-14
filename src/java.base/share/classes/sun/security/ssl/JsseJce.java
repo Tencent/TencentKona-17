@@ -76,6 +76,12 @@ final class JsseJce {
     static final String CIPHER_AES_GCM = "AES/GCM/NoPadding";
 
     /**
+     * JCE transformation string for SM4 in GCM mode
+     * without padding.
+     */
+    static final String CIPHER_SM4_GCM = "SM4/GCM/NoPadding";
+
+    /**
      * JCE transformation string for ChaCha20-Poly1305
      */
     static final String CIPHER_CHACHA20_POLY1305 = "ChaCha20-Poly1305";

@@ -72,6 +72,11 @@ enum CipherSuite {
             0x1303, true, "TLS_CHACHA20_POLY1305_SHA256",
             ProtocolVersion.PROTOCOLS_OF_13, B_CC20_P1305, H_SHA256),
 
+    // ShangMi algorithm defined by RFC 8998
+    TLS_SM4_GCM_SM3(
+            0x00C6, true, "TLS_SM4_GCM_SM3",
+            ProtocolVersion.PROTOCOLS_OF_13, B_SM4_GCM_IV, H_SM3),
+
     // Suite B compliant cipher suites, see RFC 6460.
     //
     // Note that, at present this provider is not Suite B compliant. The
@@ -1157,7 +1162,8 @@ enum CipherSuite {
         M_MD5       ("MD5",     16,  64,   9),
         M_SHA       ("SHA",     20,  64,   9),
         M_SHA256    ("SHA256",  32,  64,   9),
-        M_SHA384    ("SHA384",  48, 128,  17);
+        M_SHA384    ("SHA384",  48, 128,  17),
+        M_SM3       ("SM3",     32,  64,   9);
 
         // descriptive name, e.g. MD5
         final String name;
@@ -1194,7 +1200,8 @@ enum CipherSuite {
     static enum HashAlg {
         H_NONE      ("NONE",    0,    0),
         H_SHA256    ("SHA-256", 32,  64),
-        H_SHA384    ("SHA-384", 48, 128);
+        H_SHA384    ("SHA-384", 48, 128),
+        H_SM3       ("SM3",     32,  64);
 
         final String name;
         final int hashLength;

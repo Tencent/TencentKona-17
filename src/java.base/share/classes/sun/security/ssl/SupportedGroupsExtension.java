@@ -221,6 +221,9 @@ final class SupportedGroupsExtension {
                         NamedGroup.FFDHE_4096,
                         NamedGroup.FFDHE_6144,
                         NamedGroup.FFDHE_8192,
+
+                        // ShangMi curve last
+                        NamedGroup.CURVESM2
                     };
 
                 groupList = new ArrayList<>(groups.length);

@@ -334,6 +334,23 @@ enum SSLCipher {
         })),
 
     @SuppressWarnings({"unchecked", "rawtypes"})
+    B_SM4_GCM_IV(CIPHER_SM4_GCM, AEAD_CIPHER, 16, 16, 12, 0, true, false,
+            (Map.Entry<ReadCipherGenerator,
+                ProtocolVersion[]>[])(new Map.Entry[] {
+                new SimpleImmutableEntry<ReadCipherGenerator, ProtocolVersion[]>(
+                    new T13GcmReadCipherGenerator(),
+                    ProtocolVersion.PROTOCOLS_OF_13
+                )
+            }),
+            (Map.Entry<WriteCipherGenerator,
+                ProtocolVersion[]>[])(new Map.Entry[] {
+                new SimpleImmutableEntry<WriteCipherGenerator, ProtocolVersion[]>(
+                    new T13GcmWriteCipherGenerator(),
+                    ProtocolVersion.PROTOCOLS_OF_13
+                )
+            })),
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
     B_CC20_P1305(CIPHER_CHACHA20_POLY1305, AEAD_CIPHER, 32, 32, 12,
             12, true, false,
         (Map.Entry<ReadCipherGenerator,
