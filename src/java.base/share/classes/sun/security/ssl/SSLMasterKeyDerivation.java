@@ -55,6 +55,7 @@ enum SSLMasterKeyDerivation implements SSLKeyDerivationGenerator {
             case TLS11:
             case DTLS10:
                 return SSLMasterKeyDerivation.TLS10;
+            case TLCP11:
             case TLS12:
             case DTLS12:
                 return SSLMasterKeyDerivation.TLS12;
@@ -112,7 +113,8 @@ enum SSLMasterKeyDerivation implements SSLKeyDerivationGenerator {
                     hashAlg = cipherSuite.hashAlg;
                 }
             } else {
-                if (protocolVersion.id >= ProtocolVersion.TLS12.id) {
+                if (protocolVersion.id >= ProtocolVersion.TLS12.id
+                        || protocolVersion.isTLCP11()) {
                     masterAlg = "SunTls12MasterSecret";
                     hashAlg = cipherSuite.hashAlg;
                 } else {
@@ -122,7 +124,8 @@ enum SSLMasterKeyDerivation implements SSLKeyDerivationGenerator {
             }
 
             TlsMasterSecretParameterSpec spec;
-            if (context.handshakeSession.useExtendedMasterSecret) {
+            if (context.handshakeSession.useExtendedMasterSecret
+                    && !protocolVersion.isTLCP11()) {
                 // reset to use the extended master secret algorithm
                 masterAlg = "SunTlsExtendedMasterSecret";
 

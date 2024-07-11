@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import sun.security.ssl.SupportedGroupsExtension.SupportedGroups;
+import sun.security.ssl.TLCPKeyExchange.TLCP11KeyAgreement;
 import sun.security.ssl.X509Authentication.X509Possession;
 
 final class SSLKeyExchange implements SSLKeyAgreementGenerator,
@@ -39,7 +40,7 @@ final class SSLKeyExchange implements SSLKeyAgreementGenerator,
     private final List<SSLAuthentication> authentication;
     private final SSLKeyAgreement keyAgreement;
 
-    SSLKeyExchange(List<X509Authentication> authentication,
+    SSLKeyExchange(List<SSLAuthentication> authentication,
             SSLKeyAgreement keyAgreement) {
         if (authentication != null) {
             this.authentication = List.copyOf(authentication);
@@ -98,7 +99,8 @@ final class SSLKeyExchange implements SSLKeyAgreementGenerator,
             if (kaPossession == null) {
                 // special cases
                 if (keyAgreement == T12KeyAgreement.RSA ||
-                        keyAgreement == T12KeyAgreement.ECDH) {
+                        keyAgreement == T12KeyAgreement.ECDH ||
+                        keyAgreement == TLCP11KeyAgreement.SM2) {
                     return authentication != null ?
                             new SSLPossession[] {authPossession} :
                             new SSLPossession[0];
@@ -249,6 +251,12 @@ final class SSLKeyExchange implements SSLKeyAgreementGenerator,
                 }
             case K_ECDH_ANON:
                 return SSLKeyExECDHANON.KE;
+
+            // TLCP 1.1 key exchanges
+            case K_SM2:
+                return TLCPKeyExSM2.KE;
+            case K_SM2E:
+                return TLCPKeyExSM2E.KE;
         }
 
         return null;
@@ -338,6 +346,16 @@ final class SSLKeyExchange implements SSLKeyAgreementGenerator,
     private static class SSLKeyExECDHANON {
         private static final SSLKeyExchange KE = new SSLKeyExchange(
                 null, T12KeyAgreement.ECDHE);
+    }
+
+    private static class TLCPKeyExSM2 {
+        private static final SSLKeyExchange KE = new SSLKeyExchange(
+                Arrays.asList(TLCPAuthentication.SM2), TLCP11KeyAgreement.SM2);
+    }
+
+    private static class TLCPKeyExSM2E {
+        private static final SSLKeyExchange KE = new SSLKeyExchange(
+                Arrays.asList(TLCPAuthentication.SM2), TLCP11KeyAgreement.SM2E);
     }
 
     private enum T12KeyAgreement implements SSLKeyAgreement {

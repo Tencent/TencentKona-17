@@ -216,7 +216,7 @@ enum NamedGroup {
     // ShangMi curve defined by RFC 8998
     CURVESM2(0x0029, "curvesm2",
             NamedGroupSpec.NAMED_GROUP_ECDHE,
-            ProtocolVersion.PROTOCOLS_TO_13,
+            ProtocolVersion.PROTOCOLS_TO_13_TLCP11,
             CurveDB.lookup("curvesm2")),
 
     // Elliptic Curves (RFC 4492)
