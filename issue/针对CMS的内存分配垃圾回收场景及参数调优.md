@@ -41,6 +41,8 @@
 
 > GC日志
 
+日志为：`gc-2024-07-23_00-25-51.log.0.current`
+
 ```java
 2024-07-23T00:25:51.633+0800: 0.290: Total time for which application threads were stopped: 0.0026702 seconds, Stopping threads took: 0.0000255 seconds
 2024-07-23T00:25:51.650+0800: 0.307: [GC (CMS Initial Mark) [1 CMS-initial-mark: 205523K(349568K)] 205523K(506816K), 0.0002193 secs] [Times: user=0.00 sys=0.00, real=0.00 secs] 
@@ -136,6 +138,8 @@ public static void main(String[] args) {
 
 我们循环创建大量的字节数组对象，并将其添加到`memoryList`列表中。然后，我们清空`memoryList`列表，使其中的对象成为无效引用。导致新生代中的对象无法被回收，而在Final Mark阶段遍历新生代对象，重新标记就会导致遍历大量无效引用的新生代对象，造成长时间的停顿 该模拟场景的GC日志如下：
 
+日志为 ：`gc-2024-07-24_00-26-58.log.0.current`
+
 ```java
 2024-07-24T00:27:00.790+0800: 2.282: Total time for which application threads were stopped: 1.1754930 seconds, Stopping threads took: 0.0000567 seconds
 2024-07-24T00:27:00.792+0800: 2.284: [GC (CMS Initial Mark) [1 CMS-initial-mark: 1397697K(1398144K)] 1618885K(2027264K), 0.0017551 secs] [Times: user=0.00 sys=0.00, real=0.00 secs] 
@@ -161,6 +165,8 @@ public static void main(String[] args) {
 2024-07-24T00:26:58.805+0800: 0.296: [GC (Allocation Failure) 2024-07-24T00:26:58.805+0800: 0.296: [ParNew
 Desired survivor size 35782656 bytes, new threshold 1 (max 6)
 ```
+
+> 参数优化
 
 通过对GC日志的解读分析，针对这种场景 我们可以通过添加参数`-XX:+CMSScavengeBeforeRemark`来在执行`Final Remark`之前执行一次Minor GC，从而减少新生代对老年代的无效引用，降低最终标记阶段的停顿。于此同时 我们也可在增大堆内存的同时适当减小年龄晋升阈值和新生代的容量 使得在新生代的无效引用更快的被回收。
 
@@ -190,8 +196,10 @@ Desired survivor size 35782656 bytes, new threshold 1 (max 6)
 
 运行程序 输入的GC日志如下：
 
+日志为: `gc-2024-07-24_20-51-38.log.0.current`
+
 ```java
-2024-07-24T20:51:42.778+0800: 0.253: Total time for which application threads were stopped: 0.0634570 seconds, Stopping threads took: 0.0000265 seconds
+2024-07-24T20:51:42.778+0800: 0.253: Total time for which application threads were stopped: 0.0134570 seconds, Stopping threads took: 0.0000265 seconds
 2024-07-24T20:51:42.780+0800: 0.255: [GC (CMS Initial Mark) [1 CMS-initial-mark: 256759K(349568K)] 277285K(506816K), 0.0002175 secs] [Times: user=0.00 sys=0.00, real=0.00 secs] 
 2024-07-24T20:51:42.780+0800: 0.255: Total time for which application threads were stopped: 0.0016081 seconds, Stopping threads took: 0.0013193 seconds
 2024-07-24T20:51:42.780+0800: 0.255: [CMS-concurrent-mark-start]
@@ -228,6 +236,8 @@ Desired survivor size 35782656 bytes, new threshold 1 (max 6)
 2024-07-24T00:27:01.197+0800: 2.690: [Full GC (Allocation Failure) 2024-07-24T00:27:01.197+0800: 2.690: [CMS2024-07-24T00:27:01.214+0800: 2.706: [CMS-concurrent-mark: 0.002/0.018 secs] [Times: user=0.00 sys=0.00, real=0.02 secs] 
  (concurrent mode failure): 1397650K->1397650K(1398144K), 0.0558825 secs] 2025544K->2025544K(2027264K), [Metaspace: 3928K->3928K(1056768K)], 0.0559284 secs] [Times: user=0.00 sys=0.00, real=0.06 secs] 
 ```
+
+> 参数优化
 
 针对这种场景 我们可以
 
