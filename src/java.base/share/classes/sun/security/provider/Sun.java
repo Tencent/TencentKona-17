@@ -59,11 +59,13 @@ public final class Sun extends Provider {
         // the provider
         if (System.getSecurityManager() == null) {
             putEntries(serviceIter);
+            SMEntries.putEntries(this);
         } else {
             AccessController.doPrivileged(new PrivilegedAction<Void>() {
                 @Override
                 public Void run() {
                     putEntries(serviceIter);
+                    SMEntries.putEntries(Sun.this);
                     return null;
                 }
             });

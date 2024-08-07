@@ -27,15 +27,19 @@ package sun.security.ec;
 
 import sun.security.ec.point.*;
 import sun.security.util.ArrayUtil;
+import sun.security.util.SMUtil;
 import sun.security.util.math.*;
 import sun.security.util.math.intpoly.*;
 
 import java.math.BigInteger;
+import java.security.MessageDigest;
 import java.security.ProviderException;
+import java.security.SecureRandom;
 import java.security.spec.ECFieldFp;
 import java.security.spec.ECParameterSpec;
 import java.security.spec.ECPoint;
 import java.security.spec.EllipticCurve;
+import java.security.spec.SM2ParameterSpec;
 import java.util.Map;
 import java.util.Optional;
 
@@ -57,6 +61,12 @@ public class ECOperations {
         private static final long serialVersionUID = 1;
     }
 
+    private static final IntegerPolynomialSM2 FIELD_SM2 = new IntegerPolynomialSM2();
+    private static final SM2OrderField ORDER_FIELD_SM2 = new SM2OrderField();
+    public static final ECOperations SM2OPS = new ECOperations(
+            FIELD_SM2.getElement(SM2ParameterSpec.CURVE.getB()),
+            ORDER_FIELD_SM2);
+
     static final Map<BigInteger, IntegerFieldModuloP> fields = Map.of(
         IntegerPolynomialP256.MODULUS, new IntegerPolynomialP256(),
         IntegerPolynomialP384.MODULUS, new IntegerPolynomialP384(),
@@ -70,6 +80,9 @@ public class ECOperations {
     );
 
     public static Optional<ECOperations> forParameters(ECParameterSpec params) {
+        if (SM2OrderField.MODULUS.equals(params.getOrder())) {
+            return Optional.of(SM2OPS);
+        }
 
         EllipticCurve curve = params.getCurve();
         if (!(curve.getField() instanceof ECFieldFp)) {
@@ -283,6 +296,17 @@ public class ECOperations {
 
         return result;
 
+    }
+
+    public MutablePoint multiply(ECPoint ecPoint, byte[] s) {
+        return multiply(toAffinePoint(ecPoint), s);
+    }
+
+    public AffinePoint toAffinePoint(ECPoint ecPoint) {
+        IntegerFieldModuloP field = getField();
+        ImmutableIntegerModuloP x = field.getElement(ecPoint.getAffineX());
+        ImmutableIntegerModuloP y = field.getElement(ecPoint.getAffineY());
+        return new AffinePoint(x, y);
     }
 
     /*
@@ -505,5 +529,51 @@ public class ECOperations {
         ArrayUtil.reverse(scalar);
         return isNeutral(this.multiply(ap, scalar));
     }
-}
 
+    // SM2_KEY_CAP = order - 1 in little-endian
+    private static final byte[] SM2_KEY_CAP = SMUtil.hexToBytesLE(
+            "FFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFF7203DF6B21C6052B53BBF40939D54122");
+
+    public byte[] generatePrivateScalar(SecureRandom random) {
+        byte[] privArr = generatePrivateScalar0(random);
+
+        // For curveSM2, if the privArr is order - 1, just try once again.
+        if (orderField == ORDER_FIELD_SM2
+                && MessageDigest.isEqual(SM2_KEY_CAP, privArr)) {
+            // It should unlikely get here
+            privArr = generatePrivateScalar0(random);
+        }
+
+        return privArr;
+    }
+
+    private byte[] generatePrivateScalar0(SecureRandom random) {
+        // Attempt to create the private scalar in a loop that uses new random
+        // input each time. The chance of failure is very small assuming the
+        // implementation derives the nonce using extra bits
+        int seedSize = (orderField.getSize().bitLength() + 64 + 7) / 8;
+        byte[] seedArr = new byte[seedSize];
+        int numAttempts = 128;
+        for (int i = 0; i < numAttempts; i++) {
+            random.nextBytes(seedArr);
+            try {
+                return seedToScalar(seedArr);
+            } catch (IntermediateValueException ex) {
+                // try again in the next iteration
+            }
+        }
+
+        throw new ProviderException("Unable to produce private key after "
+                                         + numAttempts + " attempts");
+    }
+
+    public static ECPoint toECPoint(AffinePoint affPoint) {
+        return new ECPoint(
+                affPoint.getX().asBigInteger(),
+                affPoint.getY().asBigInteger());
+    }
+
+    public static boolean isInfinitePoint(AffinePoint affPoint) {
+        return affPoint.getX() == null || affPoint.getY() == null;
+    }
+}

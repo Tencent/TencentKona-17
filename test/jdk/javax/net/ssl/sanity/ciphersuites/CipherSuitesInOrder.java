@@ -44,6 +44,7 @@ public class CipherSuitesInOrder {
                     "TLS_AES_256_GCM_SHA384",
                     "TLS_AES_128_GCM_SHA256",
                     "TLS_CHACHA20_POLY1305_SHA256",
+                    "TLS_SM4_GCM_SM3",
                     // Suite B compliant cipher suites, see RFC 6460.
                     "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
                     "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
