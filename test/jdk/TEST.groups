@@ -218,7 +218,8 @@ jdk_security2 = \
     javax/crypto \
     javax/xml/crypto \
     com/sun/org/apache/xml/internal/security \
-    com/sun/crypto
+    com/sun/crypto \
+    sm
 
 jdk_security3 = \
     javax/security  \
@@ -244,6 +245,8 @@ jdk_security = \
     :jdk_security3 \
     :jdk_security4
 
+# Tests in this group are manual as they depend on external infra
+# and may fail with external reasons, for instance - change in CA test portal.
 jdk_security_infra = \
     security/infra/java/security/cert/CertPathValidator/certification
 
@@ -545,7 +548,7 @@ needs_g1gc = \
   jdk/jfr/event/gc/objectcount/TestObjectCountAfterGCEventWithG1FullCollection.java \
   jdk/jfr/event/gc/objectcount/TestObjectCountAfterGCEventWithG1ConcurrentMark.java \
   jdk/jfr/event/gc/heapsummary/TestHeapSummaryEventG1.java
-  
+
 jdk_core_manual = \
     :jdk_core_manual_no_input \
     :jdk_core_manual_no_input_security \
@@ -565,6 +568,7 @@ jdk_core_manual_no_input = \
     jdk/nio/zipfs/TestLocOffsetFromZip64EF.java
 
 jdk_core_manual_no_input_security = \
+    :jdk_security_infra \
     com/sun/crypto/provider/Cipher/DES/PerformanceTest.java \
     com/sun/security/auth/callback/TextCallbackHandler/Default.java \
     com/sun/security/auth/callback/TextCallbackHandler/Password.java \
