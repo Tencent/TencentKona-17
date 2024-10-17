@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2023, These
+ * modifications are Copyright (c) 2023, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #include "precompiled.hpp"
 #include "jvm_io.h"
 #include "asm/macroAssembler.hpp"
@@ -3522,6 +3528,7 @@ void Compile::final_graph_reshaping_main_switch(Node* n, Final_Reshape_Counts& f
       n->set_req(MemBarNode::Precedent, top());
     }
     break;
+  case Op_SameAddrLoadFence:
   case Op_MemBarAcquire: {
     if (n->as_MemBar()->trailing_load() && n->req() > MemBarNode::Precedent) {
       // At parse time, the trailing MemBarAcquire for a volatile load
