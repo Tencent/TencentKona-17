@@ -40,6 +40,7 @@ import java.util.List;
 enum ProtocolVersion {
     TLS13           (0x0304,    "TLSv1.3",      false),
     TLS12           (0x0303,    "TLSv1.2",      false),
+    TLCP11          (0x0101,    "TLCPv1.1",     false),
     TLS11           (0x0302,    "TLSv1.1",      false),
     TLS10           (0x0301,    "TLSv1",        false),
     SSL30           (0x0300,    "SSLv3",        false),
@@ -80,10 +81,20 @@ enum ProtocolVersion {
             TLS12, TLS11, TLS10, SSL30, DTLS12, DTLS10
     };
 
+    // (D)TLS ProtocolVersion array for (D)TLS 1.2 and previous versions, including TLCP 1.1
+    static final ProtocolVersion[] PROTOCOLS_TO_12_TLCP11 = new ProtocolVersion[] {
+            TLS12, TLCP11, TLS11, TLS10, SSL30, DTLS12, DTLS10
+    };
+
     // (D)TLS ProtocolVersion array for (D)TLS 1.3 and previous versions.
     static final ProtocolVersion[] PROTOCOLS_TO_13 = new ProtocolVersion[] {
             TLS13, TLS12, TLS11, TLS10, SSL30, DTLS12, DTLS10
         };
+
+    // (D)TLS ProtocolVersion array for (D)TLS 1.3 and previous versions, including TLCP 1.1
+    static final ProtocolVersion[] PROTOCOLS_TO_13_TLCP11 = new ProtocolVersion[] {
+            TLS13, TLS12, TLCP11, TLS11, TLS10, SSL30, DTLS12, DTLS10
+    };
 
     // No protocol version specified.
     static final ProtocolVersion[] PROTOCOLS_OF_NONE = new ProtocolVersion[] {
@@ -103,6 +114,11 @@ enum ProtocolVersion {
     // (D)TLS ProtocolVersion array for (D)TLS 1.2.
     static final ProtocolVersion[] PROTOCOLS_OF_12 = new ProtocolVersion[] {
             TLS12, DTLS12
+        };
+
+    // TLS ProtocolVersion array for TLCP 1.1.
+    static final ProtocolVersion[] PROTOCOLS_OF_TLCP11 = new ProtocolVersion[] {
+            TLCP11
         };
 
     // (D)TLS ProtocolVersion array for (D)TLS 1.3.
@@ -230,6 +246,12 @@ enum ProtocolVersion {
     static boolean isNegotiable(
             byte major, byte minor, boolean isDTLS, boolean allowSSL20Hello) {
         int v = ((major & 0xFF) << 8) | (minor & 0xFF);
+
+        // TLCP 1.1 must be negotiable
+        if (v == TLCP11.id) {
+            return true;
+        }
+
         if (isDTLS) {
             return v <= DTLS10.id;
         } else {
@@ -365,6 +387,13 @@ enum ProtocolVersion {
      */
     boolean useTLS10PlusSpec() {
         return isDTLS || (this.id >= TLS10.id);
+    }
+
+    /**
+     * Return true if this ProtocolVersion object is of TLCP 1.1.
+     */
+    boolean isTLCP11() {
+        return this.id == TLCP11.id;
     }
 
     /**
