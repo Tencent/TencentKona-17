@@ -63,6 +63,7 @@ enum SSLTrafficKeyDerivation implements SSLKeyDerivationGenerator {
             case TLS11:
             case DTLS10:
                 return SSLTrafficKeyDerivation.TLS10;
+            case TLCP11:
             case TLS12:
             case DTLS12:
                 return SSLTrafficKeyDerivation.TLS12;
@@ -245,7 +246,8 @@ enum SSLTrafficKeyDerivation implements SSLKeyDerivationGenerator {
                     hashAlg = cipherSuite.hashAlg;
                 }
             } else {
-                if (protocolVersion.id >= ProtocolVersion.TLS12.id) {
+                if (protocolVersion.id >= ProtocolVersion.TLS12.id
+                        || protocolVersion.isTLCP11()) {
                     keyMaterialAlg = "SunTls12KeyMaterial";
                     hashAlg = cipherSuite.hashAlg;
                 } else {

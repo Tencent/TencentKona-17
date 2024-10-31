@@ -185,6 +185,7 @@ final class Finished {
                 case TLS11:
                 case DTLS10:
                     return VerifyDataScheme.TLS10;
+                case TLCP11:
                 case TLS12:
                 case DTLS12:
                     return VerifyDataScheme.TLS12;

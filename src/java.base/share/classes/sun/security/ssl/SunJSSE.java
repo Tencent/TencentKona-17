@@ -81,6 +81,8 @@ public class SunJSSE extends java.security.Provider {
             List.of("SSLv3"), null);
         ps("SSLContext", "TLSv1.1",
             "sun.security.ssl.SSLContextImpl$TLS11Context", null, null);
+        ps("SSLContext", "TLCPv1.1",
+            "sun.security.ssl.TLCPContexts$TLCP11Context", null, null);
         ps("SSLContext", "TLSv1.2",
             "sun.security.ssl.SSLContextImpl$TLS12Context", null, null);
         ps("SSLContext", "TLSv1.3",
@@ -88,6 +90,8 @@ public class SunJSSE extends java.security.Provider {
         ps("SSLContext", "TLS",
             "sun.security.ssl.SSLContextImpl$TLSContext",
             List.of("SSL"), null);
+        ps("SSLContext", "TLCP",
+            "sun.security.ssl.TLCPContexts$TLCPContext", null, null);
 
         ps("SSLContext", "DTLSv1.0",
             "sun.security.ssl.SSLContextImpl$DTLS10Context", null, null);

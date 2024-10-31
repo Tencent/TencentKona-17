@@ -184,6 +184,24 @@ enum CipherSuite {
             ProtocolVersion.PROTOCOLS_OF_12,
             K_DHE_DSS, B_AES_128, M_SHA256, H_SHA256),
 
+    // TLCP cipher suites
+    TLCP_ECC_SM4_GCM_SM3(
+            0xE053, true, "TLCP_ECC_SM4_GCM_SM3", "ECC_SM4_GCM_SM3",
+            ProtocolVersion.PROTOCOLS_OF_TLCP11,
+            K_SM2, B_SM4_GCM, M_NULL, H_SM3),
+    TLCP_ECC_SM4_CBC_SM3(
+            0xE013, true, "TLCP_ECC_SM4_CBC_SM3", "ECC_SM4_CBC_SM3",
+            ProtocolVersion.PROTOCOLS_OF_TLCP11,
+            K_SM2, B_SM4, M_SM3, H_SM3),
+    TLCP_ECDHE_SM4_GCM_SM3(
+            0xE051, true, "TLCP_ECDHE_SM4_GCM_SM3", "ECDHE_SM4_GCM_SM3",
+            ProtocolVersion.PROTOCOLS_OF_TLCP11,
+            K_SM2E, B_SM4_GCM, M_NULL, H_SM3),
+    TLCP_ECDHE_SM4_CBC_SM3(
+            0xE011, true, "TLCP_ECDHE_SM4_CBC_SM3", "ECDHE_SM4_CBC_SM3",
+            ProtocolVersion.PROTOCOLS_OF_TLCP11,
+            K_SM2E, B_SM4, M_SM3, H_SM3),
+
     //
     // not forward secret cipher suites.
     //
@@ -1111,6 +1129,10 @@ enum CipherSuite {
             NAMED_GROUP_ECDHE, NAMED_GROUP_XDH),
         K_ECDH_ANON     ("ECDH_anon",      JsseJce.ALLOW_ECC,  true,
             NAMED_GROUP_ECDHE, NAMED_GROUP_XDH),
+
+        // KeyExchanges on SM2 standardized by GB/T 32918.3-2016
+        K_SM2           ("SM2",            true,  false,  NAMED_GROUP_ECDHE),
+        K_SM2E          ("SM2E",           true,  false,  NAMED_GROUP_ECDHE),
 
         // renegotiation protection request signaling cipher suite
         K_SCSV          ("SCSV",           true,  true,   NAMED_GROUP_NONE);

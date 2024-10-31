@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -217,8 +217,6 @@ final class ClientHello {
                 // ignore cookie
                 hos.putBytes16(getEncodedCipherSuites());
                 hos.putBytes8(compressionMethod);
-                extensions.send(hos);       // In TLS 1.3, use of certain
-                                            // extensions is mandatory.
             } catch (IOException ioe) {
                 // unlikely
             }
@@ -468,6 +466,8 @@ final class ClientHello {
             }
 
             if (session != null &&
+                // TLCP 1.1 doesn't apply ExtendedMasterSecret
+                !sessionVersion.isTLCP11() &&
                 !sessionVersion.useTLS13PlusSpec() &&
                 SSLConfiguration.useExtendedMasterSecret) {
 
@@ -904,8 +904,8 @@ final class ClientHello {
             throw context.conContext.fatal(Alert.PROTOCOL_VERSION,
                 "The client supported protocol versions " + Arrays.toString(
                     ProtocolVersion.toStringArray(clientSupportedVersions)) +
-                " are not accepted by server preferences " +
-                context.activeProtocols);
+                " are not accepted by server preferences " + Arrays.toString(
+                ProtocolVersion.toStringArray(context.activeProtocols)));
         }
     }
 
@@ -1426,6 +1426,9 @@ final class ClientHello {
             // Only need to ServerHello, which may add more responders later.
             shc.handshakeProducers.put(SSLHandshake.SERVER_HELLO.id,
                     SSLHandshake.SERVER_HELLO);
+
+            // Reset the ClientHello non-zero offset fragment allowance
+            shc.acceptCliHelloFragments = false;
 
             //
             // produce
