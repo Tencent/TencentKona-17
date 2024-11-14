@@ -153,8 +153,8 @@ struct hb_reference_wrapper
   hb_reference_wrapper (T v) : v (v) {}
   bool operator == (const hb_reference_wrapper& o) const { return v == o.v; }
   bool operator != (const hb_reference_wrapper& o) const { return v != o.v; }
-  operator T () const { return v; }
-  T get () const { return v; }
+  operator T& () { return v; }
+  T& get () { return v; }
   T v;
 };
 template <typename T>
@@ -163,8 +163,8 @@ struct hb_reference_wrapper<T&>
   hb_reference_wrapper (T& v) : v (std::addressof (v)) {}
   bool operator == (const hb_reference_wrapper& o) const { return v == o.v; }
   bool operator != (const hb_reference_wrapper& o) const { return v != o.v; }
-  operator T& () const { return *v; }
-  T& get () const { return *v; }
+  operator T& () { return *v; }
+  T& get () { return *v; }
   T* v;
 };
 
@@ -199,7 +199,7 @@ template <> struct hb_int_max<signed long long>         : hb_integral_constant<s
 template <> struct hb_int_max<unsigned long long>       : hb_integral_constant<unsigned long long,      ULLONG_MAX>     {};
 #define hb_int_max(T) hb_int_max<T>::value
 
-#if defined(__GNUC__) && __GNUC__ < 5
+#if defined(__GNUC__) && __GNUC__ < 5 && !defined(__clang__)
 #define hb_is_trivially_copyable(T) __has_trivial_copy(T)
 #define hb_is_trivially_copy_assignable(T) __has_trivial_assign(T)
 #define hb_is_trivially_constructible(T) __has_trivial_constructor(T)

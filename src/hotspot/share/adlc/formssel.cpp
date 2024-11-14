@@ -22,8 +22,16 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2023, These
+ * modifications are Copyright (c) 2023, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 // FORMS.CPP - Definitions for ADL Parser Forms Classes
 #include "adlc.hpp"
+
+#define remaining_buflen(buffer, position) (sizeof(buffer) - ((position) - (buffer)))
 
 //==============================Instructions===================================
 //------------------------------InstructForm-----------------------------------
@@ -1303,7 +1311,7 @@ bool InstructForm::check_branch_variant(ArchDesc &AD, InstructForm *short_branch
 void InstructForm::rep_var_format(FILE *fp, const char *rep_var) {
   // Handle special constant table variables.
   if (strcmp(rep_var, "constanttablebase") == 0) {
-    fprintf(fp, "char reg[128];  ra->dump_register(in(mach_constant_base_node_input()), reg);\n");
+    fprintf(fp, "char reg[128];  ra->dump_register(in(mach_constant_base_node_input()), reg, sizeof(reg));\n");
     fprintf(fp, "    st->print(\"%%s\", reg);\n");
     return;
   }
@@ -1538,7 +1546,7 @@ Predicate *InstructForm::build_predicate() {
         s += strlen(s);
       }
       // Add predicate to working buffer
-      sprintf(s,"/*%s*/(",(char*)i._key);
+      snprintf_checked(s, remaining_buflen(buf, s), "/*%s*/(",(char*)i._key);
       s += strlen(s);
       mnode->build_instr_pred(s,(char*)i._key, 0, path_bitmask, 0);
       s += strlen(s);
@@ -2501,7 +2509,7 @@ void  OperandForm::int_format(FILE *fp, FormDict &globals, uint index) {
                    strcmp(ideal_type(globalAD->globalNames()), "RegFlags") == 0)) {
     // !!!!! !!!!!
     fprintf(fp,"  { char reg_str[128];\n");
-    fprintf(fp,"    ra->dump_register(node,reg_str);\n");
+    fprintf(fp,"    ra->dump_register(node,reg_str, sizeof(reg_str));\n");
     fprintf(fp,"    st->print(\"%cs\",reg_str);\n",'%');
     fprintf(fp,"  }\n");
   } else if (_matrule && (dtype = _matrule->is_base_constant(globals)) != Form::none) {
@@ -2509,7 +2517,7 @@ void  OperandForm::int_format(FILE *fp, FormDict &globals, uint index) {
   } else if (ideal_to_sReg_type(_ident) != Form::none) {
     // Special format for Stack Slot Register
     fprintf(fp,"  { char reg_str[128];\n");
-    fprintf(fp,"    ra->dump_register(node,reg_str);\n");
+    fprintf(fp,"    ra->dump_register(node,reg_str, sizeof(reg_str));\n");
     fprintf(fp,"    st->print(\"%cs\",reg_str);\n",'%');
     fprintf(fp,"  }\n");
   } else {
@@ -2530,7 +2538,7 @@ void  OperandForm::ext_format(FILE *fp, FormDict &globals, uint index) {
     fprintf(fp,"  { char reg_str[128];\n");
     fprintf(fp,"    ra->dump_register(node->in(idx");
     if ( index != 0 ) fprintf(fp,              "+%d",index);
-    fprintf(fp,                                      "),reg_str);\n");
+    fprintf(fp,                                      "),reg_str,sizeof(reg_str));\n");
     fprintf(fp,"    st->print(\"%cs\",reg_str);\n",'%');
     fprintf(fp,"  }\n");
   } else if (_matrule && (dtype = _matrule->is_base_constant(globals)) != Form::none) {
@@ -2540,7 +2548,7 @@ void  OperandForm::ext_format(FILE *fp, FormDict &globals, uint index) {
     fprintf(fp,"  { char reg_str[128];\n");
     fprintf(fp,"    ra->dump_register(node->in(idx");
     if ( index != 0 ) fprintf(fp,                  "+%d",index);
-    fprintf(fp,                                       "),reg_str);\n");
+    fprintf(fp,                                       "),reg_str,sizeof(reg_str));\n");
     fprintf(fp,"    st->print(\"%cs\",reg_str);\n",'%');
     fprintf(fp,"  }\n");
   } else {
@@ -3476,7 +3484,7 @@ void MatchNode::build_internalop( ) {
                        _rChild->_internalop : _rChild->_opType) : "";
   len += (int)strlen(lstr) + (int)strlen(rstr);
   subtree = (char *)AdlAllocateHeap(len);
-  sprintf(subtree,"_%s_%s_%s", _opType, lstr, rstr);
+  snprintf_checked(subtree, len, "_%s_%s_%s", _opType, lstr, rstr);
   // Hash the subtree string in _internalOps; if a name exists, use it
   iop = (char *)_AD._internalOps[subtree];
   // Else create a unique name, and add it to the hash table
@@ -3898,8 +3906,9 @@ void MatchRule::matchrule_swap_commutative_op(const char* instr_ident, int count
   MatchRule* clone = new MatchRule(_AD, this);
   // Swap operands of commutative operation
   ((MatchNode*)clone)->swap_commutative_op(true, count);
-  char* buf = (char*) AdlAllocateHeap(strlen(instr_ident) + 4);
-  sprintf(buf, "%s_%d", instr_ident, match_rules_cnt++);
+  const size_t buf_size = strlen(instr_ident) + 4;
+  char* buf = (char*) AdlAllocateHeap(buf_size);
+  snprintf_checked(buf, buf_size, "%s_%d", instr_ident, match_rules_cnt++);
   clone->_result = buf;
 
   clone->_next = this->_next;
@@ -4121,6 +4130,7 @@ bool MatchRule::is_ideal_membar() const {
     !strcmp(_opType,"MemBarVolatile") ||
     !strcmp(_opType,"MemBarCPUOrder") ||
     !strcmp(_opType,"MemBarStoreStore") ||
+    !strcmp(_opType,"SameAddrLoadFence" ) ||
     !strcmp(_opType,"OnSpinWait");
 }
 

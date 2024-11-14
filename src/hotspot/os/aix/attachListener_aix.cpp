@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2005, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2005, 2022, Oracle and/or its affiliates. All rights reserved.
  * Copyright (c) 2012, 2018 SAP SE. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -28,7 +28,6 @@
 #include "runtime/interfaceSupport.inline.hpp"
 #include "runtime/os.inline.hpp"
 #include "services/attachListener.hpp"
-#include "services/dtraceAttacher.hpp"
 
 #include <signal.h>
 #include <sys/socket.h>
@@ -267,7 +266,7 @@ int AixAttachListener::init() {
 //
 AixAttachOperation* AixAttachListener::read_request(int s) {
   char ver_str[8];
-  sprintf(ver_str, "%d", ATTACH_PROTOCOL_VER);
+  os::snprintf_checked(ver_str, sizeof(ver_str), "%d", ATTACH_PROTOCOL_VER);
 
   // The request is a sequence of strings so we first figure out the
   // expected count and the maximum possible length of the request.
@@ -312,7 +311,7 @@ AixAttachOperation* AixAttachListener::read_request(int s) {
           if ((strlen(buf) != strlen(ver_str)) ||
               (atoi(buf) != ATTACH_PROTOCOL_VER)) {
             char msg[32];
-            sprintf(msg, "%d\n", ATTACH_ERROR_BADVERSION);
+            os::snprintf_checked(msg, sizeof(msg), "%d\n", ATTACH_ERROR_BADVERSION);
             write_fully(s, msg, strlen(msg));
             return NULL;
           }
@@ -442,7 +441,7 @@ void AixAttachOperation::complete(jint result, bufferedStream* st) {
 
   // write operation result
   char msg[32];
-  sprintf(msg, "%d\n", result);
+  os::snprintf_checked(msg, sizeof(msg), "%d\n", result);
   int rc = AixAttachListener::write_fully(this->socket(), msg, strlen(msg));
 
   // write any result data
@@ -545,7 +544,7 @@ bool AttachListener::is_init_trigger() {
   char fn[PATH_MAX + 1];
   int ret;
   struct stat64 st;
-  sprintf(fn, ".attach_pid%d", os::current_process_id());
+  os::snprintf_checked(fn, sizeof(fn), ".attach_pid%d", os::current_process_id());
   RESTARTABLE(::stat64(fn, &st), ret);
   if (ret == -1) {
     log_trace(attach)("Failed to find attach file: %s, trying alternate", fn);

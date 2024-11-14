@@ -28,7 +28,7 @@
 # Setup flags for C/C++ compiler
 #
 
-###############################################################################
+################################################################################
 #
 # How to compile shared libraries.
 #
@@ -37,7 +37,10 @@ AC_DEFUN([FLAGS_SETUP_SHARED_LIBS],
   if test "x$TOOLCHAIN_TYPE" = xgcc; then
     # Default works for linux, might work on other platforms as well.
     SHARED_LIBRARY_FLAGS='-shared'
-    SET_EXECUTABLE_ORIGIN='-Wl,-rpath,\$$ORIGIN[$]1'
+    # --disable-new-dtags forces use of RPATH instead of RUNPATH for rpaths.
+    # This protects internal library dependencies within the JDK from being
+    # overridden using LD_LIBRARY_PATH. See JDK-8326891 for more information.
+    SET_EXECUTABLE_ORIGIN='-Wl,-rpath,\$$ORIGIN[$]1 -Wl,--disable-new-dtags'
     SET_SHARED_LIBRARY_ORIGIN="-Wl,-z,origin $SET_EXECUTABLE_ORIGIN"
     SET_SHARED_LIBRARY_NAME='-Wl,-soname=[$]1'
     SET_SHARED_LIBRARY_MAPFILE='-Wl,-version-script=[$]1'
@@ -55,6 +58,9 @@ AC_DEFUN([FLAGS_SETUP_SHARED_LIBS],
       # Default works for linux, might work on other platforms as well.
       SHARED_LIBRARY_FLAGS='-shared'
       SET_EXECUTABLE_ORIGIN='-Wl,-rpath,\$$ORIGIN[$]1'
+      if test "x$OPENJDK_TARGET_OS" = xlinux; then
+        SET_EXECUTABLE_ORIGIN="$SET_EXECUTABLE_ORIGIN -Wl,--disable-new-dtags"
+      fi
       SET_SHARED_LIBRARY_NAME='-Wl,-soname=[$]1'
       SET_SHARED_LIBRARY_MAPFILE='-Wl,-version-script=[$]1'
 
@@ -171,6 +177,8 @@ AC_DEFUN([FLAGS_SETUP_WARNINGS],
       if test "x$TOOLCHAIN_VERSION" = x2017; then
         # VS2017 incorrectly triggers this warning for constexpr
         DISABLED_WARNINGS+=" 4307"
+        # VS2017 incorrectly triggers this warning for static cast (test_atomic.cpp)
+        DISABLED_WARNINGS+=" 4309"
       fi
       ;;
 
@@ -411,7 +419,7 @@ AC_DEFUN([FLAGS_SETUP_CFLAGS_HELPER],
 [
   #### OS DEFINES, these should be independent on toolchain
   if test "x$OPENJDK_TARGET_OS" = xlinux; then
-    CFLAGS_OS_DEF_JVM="-DLINUX"
+    CFLAGS_OS_DEF_JVM="-DLINUX -D_FILE_OFFSET_BITS=64"
     CFLAGS_OS_DEF_JDK="-D_GNU_SOURCE -D_REENTRANT -D_LARGEFILE64_SOURCE"
   elif test "x$OPENJDK_TARGET_OS" = xmacosx; then
     CFLAGS_OS_DEF_JVM="-D_ALLBSD_SOURCE -D_DARWIN_C_SOURCE -D_XOPEN_SOURCE"

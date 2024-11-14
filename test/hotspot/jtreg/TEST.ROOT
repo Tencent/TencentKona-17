@@ -32,7 +32,9 @@
 # intermittent:         flaky test, known to fail intermittently
 # randomness:           test uses randomness, test cases differ from run to run
 # cgroups:              test uses cgroups
-keys=stress headful intermittent randomness cgroups
+# external-dep:         test requires external dependencies to work
+# flag-sensitive:       test is sensitive to certain flags and might fail when flags are passed using -vmoptions and -javaoptions
+keys=stress headful intermittent randomness cgroups external-dep flag-sensitive
 
 groups=TEST.groups TEST.quick-groups
 
@@ -57,6 +59,7 @@ requires.properties= \
     vm.gc.Epsilon \
     vm.gc.Z \
     vm.jvmci \
+    vm.jvmci.enabled \
     vm.emulatedClient \
     vm.cpu.features \
     vm.pageSize \

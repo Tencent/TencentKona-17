@@ -55,6 +55,10 @@ class VM_Version : public Abstract_VM_Version {
       _enabled = true;
       _value = value;
     }
+    void disable_feature() {
+      _enabled = false;
+      _value = -1;
+    }
     const char* const pretty()   { return _pretty; }
     const uint64_t feature_bit() { return _feature_bit; }
     const bool feature_string()  { return _feature_string; }
@@ -63,16 +67,21 @@ class VM_Version : public Abstract_VM_Version {
     virtual void update_flag() = 0;
   };
 
-  #define UPDATE_DEFAULT(flag)        \
-  void update_flag() {                \
-      assert(enabled(), "Must be.");  \
-      if (FLAG_IS_DEFAULT(flag)) {    \
-        FLAG_SET_DEFAULT(flag, true); \
-      }                               \
-  }                                   \
+  #define UPDATE_DEFAULT(flag)             \
+  void update_flag() {                     \
+      assert(enabled(), "Must be.");       \
+      if (FLAG_IS_DEFAULT(flag)) {         \
+        FLAG_SET_DEFAULT(flag, true);      \
+      } else {                             \
+        /* Sync CPU features with flags */ \
+        if (!flag) {                       \
+          disable_feature();               \
+        }                                  \
+      }                                    \
+  }                                        \
 
-  #define NO_UPDATE_DEFAULT           \
-  void update_flag() {}               \
+  #define NO_UPDATE_DEFAULT                \
+  void update_flag() {}                    \
 
   // Frozen standard extensions
   // I RV64I
@@ -199,6 +208,9 @@ class VM_Version : public Abstract_VM_Version {
   static void initialize_cpu_information();
 
   constexpr static bool supports_stack_watermark_barrier() { return true; }
+
+  // RISCV64 supports fast class initialization checks
+  static bool supports_fast_class_init_checks() { return true; }
 };
 
 #endif // CPU_RISCV_VM_VERSION_RISCV_HPP

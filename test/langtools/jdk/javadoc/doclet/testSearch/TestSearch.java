@@ -45,7 +45,7 @@ import javadoc.tester.JavadocTester;
 public class TestSearch extends JavadocTester {
 
     public static void main(String... args) throws Exception {
-        TestSearch tester = new TestSearch();
+        var tester = new TestSearch();
         tester.runTests();
     }
 
@@ -411,7 +411,7 @@ public class TestSearch extends JavadocTester {
                     <link rel="stylesheet" type="text/css" href="script-dir/jquery-ui.min.css" title="Style">
                     """,
                 """
-                    <script type="text/javascript" src="script-dir/jquery-3.6.1.min.js"></script>
+                    <script type="text/javascript" src="script-dir/jquery-3.7.1.min.js"></script>
                     """,
                 """
                     <script type="text/javascript" src="script-dir/jquery-ui.min.js"></script>""",
@@ -684,7 +684,7 @@ public class TestSearch extends JavadocTester {
         checkFiles(expectedOutput,
                 "search.js",
                 "jquery-ui.overrides.css",
-                "script-dir/jquery-3.6.1.min.js",
+                "script-dir/jquery-3.7.1.min.js",
                 "script-dir/jquery-ui.min.js",
                 "script-dir/jquery-ui.min.css",
                 "resources/x.png",
@@ -822,8 +822,8 @@ public class TestSearch extends JavadocTester {
                     ck="show('all-classes-table', 'all-classes-table-tab7', 2)" class="table-tab">An\
                     notation Interfaces</button>\
                     </div>
-                    <div id="all-classes-table.tabpanel" role="tabpanel">
-                    <div class="summary-table two-column-summary" aria-labelledby="all-classes-table-tab0">
+                    <div id="all-classes-table.tabpanel" role="tabpanel" aria-labelledby="all-classes-table-tab0">
+                    <div class="summary-table two-column-summary">
                     <div class="table-header col-first">Class</div>
                     <div class="table-header col-last">Description</div>""");
         checkOutput("allpackages-index.html", true,

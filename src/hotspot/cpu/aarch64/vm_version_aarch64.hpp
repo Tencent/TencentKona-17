@@ -107,8 +107,9 @@ public:
     CPU_MODEL_ALTRA     = 0xd0c, /* CPU implementer is CPU_ARM, Neoverse N1 */
     CPU_MODEL_ALTRAMAX  = 0xd0c, /* CPU implementer is CPU_ARM, Neoverse N1 */
     CPU_MODEL_AMPERE_1  = 0xac3, /* CPU implementer is CPU_AMPERE */
-    CPU_MODEL_AMPERE_1A = 0xac4  /* CPU implementer is CPU_AMPERE */
-  };
+    CPU_MODEL_AMPERE_1A = 0xac4, /* CPU implementer is CPU_AMPERE */
+    CPU_MODEL_AMPERE_1B = 0xac5  /* AMPERE_1B core Implements ARMv8.7 with CSSC, MTE, SM3/SM4 extensions */
+};
 
   enum Feature_Flag {
 #define CPU_FEATURE_FLAGS(decl)               \
@@ -140,6 +141,10 @@ public:
   static int cpu_model2()                     { return _model2; }
   static int cpu_variant()                    { return _variant; }
   static int cpu_revision()                   { return _revision; }
+
+  static bool model_is(int cpu_model) {
+    return _model == cpu_model || _model2 == cpu_model;
+  }
 
   static bool is_zva_enabled() { return 0 <= _zva_length; }
   static int zva_length() {
