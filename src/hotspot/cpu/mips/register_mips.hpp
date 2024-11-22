@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2000, 2012, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2015, 2022, Loongson Technology. All rights reserved.
+ * Copyright (c) 2015, 2024, Loongson Technology. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -105,8 +105,9 @@ CONSTANT_REGISTER_DECLARATION(Register, i31,   (31));
 #define NOREG ((Register)(noreg_RegisterEnumValue))
 
 #define I0 ((Register)(i0_RegisterEnumValue))
-#define I1 ((Register)(i1_RegisterEnumValue))
-#define I2 ((Register)(i2_RegisterEnumValue))
+// Conflict with I1 and I2 in googlemock/include/gmock/gmock-actions.h
+//#define I1 ((Register)(i1_RegisterEnumValue))
+//#define I2 ((Register)(i2_RegisterEnumValue))
 #define I3 ((Register)(i3_RegisterEnumValue))
 #define I4 ((Register)(i4_RegisterEnumValue))
 #define I5 ((Register)(i5_RegisterEnumValue))

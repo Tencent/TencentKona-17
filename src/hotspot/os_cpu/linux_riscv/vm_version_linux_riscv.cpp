@@ -108,13 +108,22 @@ void VM_Version::setup_cpu_available_features() {
   char buf[1024] = {};
   if (uarch != nullptr && strcmp(uarch, "") != 0) {
     // Use at max half the buffer.
-    snprintf(buf, sizeof(buf)/2, "%s,", uarch);
+    snprintf(buf, sizeof(buf)/2, "%s ", uarch);
   }
   os::free((void*) uarch);
   strcat(buf, "rv64");
   int i = 0;
   while (_feature_list[i] != nullptr) {
     if (_feature_list[i]->enabled()) {
+      // Change flag default
+      _feature_list[i]->update_flag();
+
+      // Feature will be disabled by update_flag() if flag
+      // is set to false by the user on the command line.
+      if (!_feature_list[i]->enabled()) {
+        continue;
+      }
+
       log_debug(os, cpu)("Enabled RV64 feature \"%s\" (%ld)",
              _feature_list[i]->pretty(),
              _feature_list[i]->value());
@@ -122,13 +131,14 @@ void VM_Version::setup_cpu_available_features() {
       if (_feature_list[i]->feature_string()) {
         const char* tmp = _feature_list[i]->pretty();
         if (strlen(tmp) == 1) {
+          strcat(buf, " ");
           strcat(buf, tmp);
         } else {
           // Feature string is expected to be lower case.
           // Turn Zxxx into zxxx
           char prebuf[3] = {};
           assert(strlen(tmp) > 1, "Must be");
-          prebuf[0] = '_';
+          prebuf[0] = ' ';
           prebuf[1] = (char)tolower(tmp[0]);
           strcat(buf, prebuf);
           strcat(buf, &tmp[1]);
@@ -138,8 +148,6 @@ void VM_Version::setup_cpu_available_features() {
       if (_feature_list[i]->feature_bit() != 0) {
         _features |= _feature_list[i]->feature_bit();
       }
-      // Change flag default
-      _feature_list[i]->update_flag();
     }
     i++;
   }
@@ -168,13 +176,13 @@ void VM_Version::os_aux_features() {
 }
 
 VM_Version::VM_MODE VM_Version::parse_satp_mode(const char* vm_mode) {
-  if (!strcmp(vm_mode, "sv39")) {
+  if (!strncmp(vm_mode, "sv39", sizeof "sv39" - 1)) {
     return VM_SV39;
-  } else if (!strcmp(vm_mode, "sv48")) {
+  } else if (!strncmp(vm_mode, "sv48", sizeof "sv48" - 1)) {
     return VM_SV48;
-  } else if (!strcmp(vm_mode, "sv57")) {
+  } else if (!strncmp(vm_mode, "sv57", sizeof "sv57" - 1)) {
     return VM_SV57;
-  } else if (!strcmp(vm_mode, "sv64")) {
+  } else if (!strncmp(vm_mode, "sv64", sizeof "sv64" - 1)) {
     return VM_SV64;
   } else {
     return VM_MBARE;
@@ -196,7 +204,7 @@ char* VM_Version::os_uarch_additional_features() {
     if ((p = strchr(buf, ':')) != nullptr) {
       if (mode == VM_NOTSET) {
         if (strncmp(buf, "mmu", sizeof "mmu" - 1) == 0) {
-          mode = VM_Version::parse_satp_mode(p);
+          mode = VM_Version::parse_satp_mode(p + 2);
         }
       }
       if (ret == nullptr) {

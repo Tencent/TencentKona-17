@@ -1080,13 +1080,18 @@ public abstract class AbstractQueuedLongSynchronizer
         private void doSignal(ConditionNode first, boolean all) {
             while (first != null) {
                 ConditionNode next = first.nextWaiter;
+
                 if ((firstWaiter = next) == null)
                     lastWaiter = null;
+                else
+                    first.nextWaiter = null; // GC assistance
+
                 if ((first.getAndUnsetStatus(COND) & COND) != 0) {
                     enqueue(first);
                     if (!all)
                         break;
                 }
+
                 first = next;
             }
         }
@@ -1156,7 +1161,9 @@ public abstract class AbstractQueuedLongSynchronizer
          */
         private boolean canReacquire(ConditionNode node) {
             // check links, not status to avoid enqueue race
-            return node != null && node.prev != null && isEnqueued(node);
+            Node p; // traverse unless known to be bidirectionally linked
+            return node != null && (p = node.prev) != null &&
+                (p.next == node || isEnqueued(node));
         }
 
         /**

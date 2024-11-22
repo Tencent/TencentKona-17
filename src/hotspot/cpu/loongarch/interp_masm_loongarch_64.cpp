@@ -1642,6 +1642,7 @@ void InterpreterMacroAssembler::narrow(Register result) {
 
 
 void InterpreterMacroAssembler::profile_obj_type(Register obj, const Address& mdo_addr) {
+  assert_different_registers(obj, AT, T5, mdo_addr.base(), mdo_addr.index());
   Label update, next, none;
 
   verify_oop(obj);
@@ -1680,25 +1681,21 @@ void InterpreterMacroAssembler::profile_obj_type(Register obj, const Address& md
   xorr(obj, obj, AT);
 
   assert(TypeEntries::type_klass_mask == -4, "must be");
-  bstrpick_d(AT, obj, 63, 2);
-  beqz(AT, next);
+  bstrpick_d(T5, obj, 63, 2);
+  beqz(T5, next);
 
-  andi(AT, obj, TypeEntries::type_unknown);
-  bnez(AT, next);
+  andi(T5, obj, TypeEntries::type_unknown);
+  bnez(T5, next);
 
-  if (mdo_addr.index() == noreg) {
-    ld_d(AT, mdo_addr);
-  } else {
-    ld_d(AT, T0, mdo_addr.disp());
-  }
   beqz(AT, none);
 
-  addi_d(AT, AT, -(TypeEntries::null_seen));
-  beqz(AT, none);
+  addi_d(T5, AT, -(TypeEntries::null_seen));
+  beqz(T5, none);
 
-  // There is a chance that the checks above (re-reading profiling
-  // data from memory) fail if another thread has just set the
+  // There is a chance that the checks above
+  // fail if another thread has just set the
   // profiling to this obj's klass
+  xorr(obj, obj, AT); // get back original value before XOR
   if (mdo_addr.index() == noreg) {
     ld_d(AT, mdo_addr);
   } else {
@@ -1730,6 +1727,11 @@ void InterpreterMacroAssembler::profile_obj_type(Register obj, const Address& md
   } else {
     st_d(obj, T0, mdo_addr.disp());
   }
+#ifdef ASSERT
+  assert(TypeEntries::type_mask == -2, "must be");
+  bstrpick_d(obj, obj, 63, 1);
+  verify_klass_ptr(obj);
+#endif
 
   bind(next);
   if (mdo_addr.index() != noreg) {

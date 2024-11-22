@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,10 +35,13 @@
 
 EventLog* Events::_logs = NULL;
 StringEventLog* Events::_messages = NULL;
+StringEventLog* Events::_memprotect_messages = NULL;
+StringEventLog* Events::_nmethod_flush_messages = NULL;
 StringEventLog* Events::_vm_operations = NULL;
 ExceptionsEventLog* Events::_exceptions = NULL;
 StringEventLog* Events::_redefinitions = NULL;
 UnloadingEventLog* Events::_class_unloading = NULL;
+StringEventLog* Events::_class_loading = NULL;
 StringEventLog* Events::_deopt_messages = NULL;
 StringEventLog* Events::_dll_messages = NULL;
 
@@ -93,10 +96,13 @@ void Events::print() {
 void Events::init() {
   if (LogEvents) {
     _messages = new StringEventLog("Events", "events");
+    _nmethod_flush_messages = new StringEventLog("Nmethod flushes", "nmethodflushes");
+    _memprotect_messages = new StringEventLog("Memory protections", "memprotects");
     _vm_operations = new StringEventLog("VM Operations", "vmops");
     _exceptions = new ExceptionsEventLog("Internal exceptions", "exc");
     _redefinitions = new StringEventLog("Classes redefined", "redef");
     _class_unloading = new UnloadingEventLog("Classes unloaded", "unload");
+    _class_loading = new StringEventLog("Classes loaded", "load");
     _deopt_messages = new StringEventLog("Deoptimization events", "deopt");
     _dll_messages = new StringEventLog("Dll operation events", "dll");
   }

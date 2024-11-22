@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,21 +36,33 @@
  * The following implementation specific environment properties are supported by the
  * default LDAP Naming Service Provider implementation in the JDK:
  * <ul>
+ *     <li>{@code java.naming.ldap.factory.socket}:
+ *         <br>The value of this environment property specifies the fully
+ *         qualified class name of the socket factory used by the LDAP provider.
+ *         This class must implement the {@link javax.net.SocketFactory} abstract class
+ *         and provide an implementation of the static "getDefault()" method that
+ *         returns an instance of the socket factory. By default the environment
+ *         property is not set.
+ *     </li>
  *     <li>{@code com.sun.jndi.ldap.connect.timeout}:
- *         <br>The value of this property is the string representation
- *         of an integer representing the connection timeout in
- *         milliseconds. If the LDAP provider cannot establish a
- *         connection within that period, it aborts the connection attempt.
+ *         <br>The value of this environment property is the string representation
+ *         of an integer specifying the connection timeout in milliseconds.
+ *         If the LDAP provider cannot establish a connection within that period,
+ *         it aborts the connection attempt.
  *         The integer should be greater than zero. An integer less than
  *         or equal to zero means to use the network protocol's (i.e., TCP's)
  *         timeout value.
  *         <br> If this property is not specified, the default is to wait
  *         for the connection to be established or until the underlying
  *         network times out.
+ *         <br> If a custom socket factory is provided via environment property
+ *         {@code java.naming.ldap.factory.socket} and unconnected sockets
+ *         are not supported, the specified timeout is ignored
+ *         and the provider behaves as if no connection timeout was set.
  *     </li>
  *     <li>{@code com.sun.jndi.ldap.read.timeout}:
  *         <br>The value of this property is the string representation
- *         of an integer representing the read timeout in milliseconds
+ *         of an integer specifying the read timeout in milliseconds
  *         for LDAP operations. If the LDAP provider cannot get a LDAP
  *         response within that period, it aborts the read attempt. The
  *         integer should be greater than zero. An integer less than or
@@ -79,11 +91,16 @@
  * <ul>
  *     <li>{@systemProperty com.sun.jndi.ldap.object.trustSerialData}:
  *          <br>The value of this system property is the string representation of a boolean value
- *          which allows to control the deserialization of java objects from the 'javaSerializedData'
- *          LDAP attribute. To prevent the deserialization of java objects from the 'javaSerializedData'
- *          attribute, the system property value can be set to 'false'.
- *          <br>If the property is not specified then the deserialization of java objects
- *          from the 'javaSerializedData' attribute is allowed.
+ *          that controls the deserialization of java objects from the {@code javaSerializedData} LDAP
+ *          attribute, reconstruction of RMI references from the {@code javaRemoteLocation} LDAP attribute, and
+ *          reconstruction of {@linkplain javax.naming.BinaryRefAddr binary reference addresses} from
+ *          the {@code javaReferenceAddress} LDAP attribute.
+ *          To allow the deserialization or reconstruction of java objects from {@code javaSerializedData},
+ *          {@code javaRemoteLocation} or {@code javaReferenceAddress} attributes, the system property value
+ *          can be set to {@code true} (case insensitive).
+ *          <br>If the property is not specified the deserialization of java objects
+ *          from the {@code javaSerializedData}, the {@code javaRemoteLocation}, or {@code javaReferenceAddress}
+ *          attributes is not allowed.
  *     </li>
  *     <li>{@systemProperty jdk.jndi.object.factoriesFilter}:
  *          <br>The value of this system property defines a filter used by
