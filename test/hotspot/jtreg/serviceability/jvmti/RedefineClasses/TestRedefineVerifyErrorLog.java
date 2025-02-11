@@ -40,7 +40,7 @@ class TestRedefineVerifyErrorLog_B {
 
 public class TestRedefineVerifyErrorLog {
      public static void main(String[] args) throws Exception  {
-        ProcessBuilder pb = ProcessTools.createJavaProcessBuilder("-javaagent:redefineagent.jar",
+        ProcessBuilder pb = ProcessTools.createLimitedTestJavaProcessBuilder("-javaagent:redefineagent.jar",
                                                                   "-Dtest.jdk=" + System.getProperty("test.jdk"),
                                                                   "-Xlog:redefine+class+load+exceptions",
                                                                   "RedefineVerifyErrorLog");
