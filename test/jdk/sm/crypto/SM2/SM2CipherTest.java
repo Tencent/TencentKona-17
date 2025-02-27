@@ -255,13 +255,12 @@ public class SM2CipherTest {
         Cipher cipher = Cipher.getInstance("SM2");
 
         cipher.init(Cipher.ENCRYPT_MODE, pubKey);
-        byte[] ciphertext = cipher.doFinal(EMPTY);
+        assertThrows(BadPaddingException.class,
+                () -> cipher.doFinal(EMPTY));
 
         cipher.init(Cipher.DECRYPT_MODE, priKey);
         assertThrows(BadPaddingException.class,
                 () -> cipher.doFinal(EMPTY));
-        byte[] cleartext = cipher.doFinal(ciphertext);
-        assertArrayEquals(EMPTY, cleartext);
     }
 
     @Test
@@ -272,17 +271,12 @@ public class SM2CipherTest {
         Cipher cipher = Cipher.getInstance("SM2");
 
         cipher.init(Cipher.ENCRYPT_MODE, pubKey);
-        ByteBuffer ciphertextBuf = ByteBuffer.allocate(150);
-        cipher.doFinal(ByteBuffer.allocate(0), ciphertextBuf);
-        ciphertextBuf.flip();
+        assertThrows(BadPaddingException.class,
+                () -> cipher.doFinal(ByteBuffer.allocate(0), ByteBuffer.allocate(150)));
 
         cipher.init(Cipher.DECRYPT_MODE, priKey);
-        ByteBuffer cleartextBuf = ByteBuffer.allocate(150);
         assertThrows(BadPaddingException.class,
-                () -> cipher.doFinal(ByteBuffer.allocate(0), cleartextBuf));
-        cipher.doFinal(ciphertextBuf, cleartextBuf);
-
-        assertEquals(0, cleartextBuf.position());
+                () -> cipher.doFinal(ByteBuffer.allocate(0), ByteBuffer.allocate(150)));
     }
 
     @Test
