@@ -24,6 +24,7 @@
 /*
  * @test
  * @summary Test the property of -Dkona.socket.tos.value
+ * @requires os.family == "linux"
  * @library /test/lib
  * @run main/othervm TestKonaSocketTOSValue
  */
