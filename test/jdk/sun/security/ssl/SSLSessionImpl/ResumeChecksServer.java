@@ -134,7 +134,10 @@ public class ResumeChecksServer extends SSLContextTemplate {
 
 
         private boolean test(String a) {
-            return !a.toLowerCase().contains(alg.toLowerCase());
+            return !a.toLowerCase().contains(alg.toLowerCase())
+                    // sm2sig_sm3 should always be excluded
+                    // due to no matched certificate in the test key store
+                    && !a.equalsIgnoreCase("sm2sig_sm3");
         }
 
         public boolean permits(Set<CryptoPrimitive> primitives, Key key) {
