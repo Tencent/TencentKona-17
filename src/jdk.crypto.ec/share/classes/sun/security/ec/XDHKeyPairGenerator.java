@@ -38,6 +38,7 @@ import java.security.spec.NamedParameterSpec;
 import java.util.Arrays;
 
 import sun.security.jca.JCAUtil;
+import sun.security.util.ArrayUtil;
 
 /**
  * Key pair generator for the XDH key agreement algorithm.
@@ -102,11 +103,16 @@ public class XDHKeyPairGenerator extends KeyPairGeneratorSpi {
 
     @Override
     public KeyPair generateKeyPair() {
-
         byte[] privateKey = ops.generatePrivate(random);
         // computePublic may modify the private key, so clone it first
         byte[] cloned = privateKey.clone();
-        BigInteger publicKey = ops.computePublic(cloned);
+
+        BigInteger publicKey = null;
+        if (NativeEC.useNativeXDH(ops.getParameters().getName())) {
+            publicKey = computePublicNative(cloned);
+        } else {
+            publicKey = ops.computePublic(cloned);
+        }
         Arrays.fill(cloned, (byte)0);
 
         try {
@@ -119,6 +125,24 @@ public class XDHKeyPairGenerator extends KeyPairGeneratorSpi {
         } finally {
             Arrays.fill(privateKey, (byte)0);
         }
+    }
+
+    private BigInteger computePublicNative(byte[] privKey) {
+        int curveNID = NativeEC.getXECCurveNID(ops.getParameters().getName());
+        if (curveNID == -1) {
+            return null;
+        }
+
+        byte[] publicKeyOut = new byte[privKey.length];
+        try {
+            NativeEC.xdhComputePubKey(curveNID, privKey, publicKeyOut);
+        } catch (Exception e) {
+            throw new ProviderException(e);
+        }
+        // OpenSSL uses the little-endian order per RFC 7748.
+        // However, JDK uses the big-endian as usual.
+        ArrayUtil.reverse(publicKeyOut);
+        return new BigInteger(1, publicKeyOut);
     }
 
     static class X25519 extends XDHKeyPairGenerator {

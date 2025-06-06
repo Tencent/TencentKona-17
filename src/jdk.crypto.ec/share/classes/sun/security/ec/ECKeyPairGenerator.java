@@ -25,7 +25,6 @@
 
 package sun.security.ec;
 
-import java.io.IOException;
 import java.math.BigInteger;
 import java.security.*;
 import java.security.spec.AlgorithmParameterSpec;
@@ -146,9 +145,13 @@ public final class ECKeyPairGenerator extends KeyPairGeneratorSpi {
         }
 
         try {
-            Optional<KeyPair> kp = generateKeyPairImpl(random);
-            if (kp.isPresent()) {
-                return kp.get();
+            if (NativeEC.useNativeEC((ECParameterSpec)params)) {
+                return generateKeyPairNative(random);
+            } else {
+                Optional<KeyPair> kp = generateKeyPairImpl(random);
+                if (kp.isPresent()) {
+                    return kp.get();
+                }
             }
         } catch (Exception ex) {
             throw new ProviderException(ex);
@@ -205,6 +208,35 @@ public final class ECKeyPairGenerator extends KeyPairGeneratorSpi {
         PublicKey publicKey = new ECPublicKeyImpl(w, ecParams);
 
         return Optional.of(new KeyPair(publicKey, privateKey));
+    }
+
+    private KeyPair generateKeyPairNative(SecureRandom random)
+            throws Exception {
+        ECParameterSpec ecParams = (ECParameterSpec) params;
+        byte[] encodedParams = ECUtil.encodeECParameterSpec(null, ecParams);
+        int curveNID = NativeEC.getECCurveNID(encodedParams);
+
+        // seed is twice the key size (in bytes) plus 1
+        int keySizeInByte = (keySize + 7) >> 3;
+        byte[] seed = new byte[(keySizeInByte + 1) * 2];
+        random.nextBytes(seed);
+
+        byte[] privKey = new byte[keySizeInByte];
+        byte[] pubKey = new byte[keySizeInByte * 2 + 1];
+        NativeEC.ecGenKeyPair(curveNID, seed, privKey, pubKey);
+
+        // The 'params' object supplied above is equivalent to the native
+        // one so there is no need to fetch it.
+        // keyBytes[0] is the encoding of the native private key
+        BigInteger s = new BigInteger(1, privKey);
+
+        PrivateKey privateKey = new ECPrivateKeyImpl(s, ecParams);
+
+        // keyBytes[1] is the encoding of the native public key
+        ECPoint w = ECUtil.decodePoint(pubKey, ecParams.getCurve());
+        PublicKey publicKey = new ECPublicKeyImpl(w, ecParams);
+
+        return new KeyPair(publicKey, privateKey);
     }
 
     private void checkKeySize(int keySize) throws InvalidParameterException {

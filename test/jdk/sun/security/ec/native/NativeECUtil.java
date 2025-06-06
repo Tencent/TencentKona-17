@@ -1,0 +1,125 @@
+/*
+ * Copyright (C) 2025, THL A29 Limited, a Tencent company. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.concurrent.*;
+
+public class NativeECUtil {
+
+    public static boolean nativeCryptoSupported() {
+        String opensslCryptoPath = opensslCryptoPath();
+        boolean supported = nativeECSupported() && opensslCryptoPath != null;
+        if (supported) {
+            System.setProperty("jdk.openssl.cryptoLibPath", opensslCryptoPath);
+        }
+        return supported;
+    }
+
+    private static boolean nativeECSupported() {
+        Path jdkLibDir = Paths.get(System.getProperty("test.jdk")).resolve("lib");
+        Path suneccryptoLinuxPath = jdkLibDir.resolve("libsuneccrypto.so");
+        return Files.exists(suneccryptoLinuxPath);
+    }
+
+    private static String opensslCryptoPath() {
+        String osName = System.getProperty("os.name").toLowerCase(Locale.ROOT);
+        String os = "unsupported";
+        String ext = "unsupported";
+        if (osName.contains("linux")) {
+            os = "linux";
+            ext = ".so";
+        }
+
+        String archName = System.getProperty("os.arch").toLowerCase(Locale.ROOT);
+        String arch = "unsupported";
+        if (archName.contains("x86_64") || archName.contains("amd64")) {
+            arch = "x86_64";
+        } else if (archName.contains("aarch64") || archName.contains("arm64")) {
+            arch = "aarch64";
+        }
+
+        String platformName = os + "-" + arch;
+        String libName = "libopensslcrypto" + ext;
+
+        Path testSrcDir = Paths.get(System.getProperty("test.src"));
+        Path libPath = testSrcDir.resolve("lib").resolve(platformName).resolve(libName);
+        return Files.exists(libPath) ? libPath.toString() : null;
+    }
+
+    public static int privKeyLen(int orderLenInBit) {
+        return (orderLenInBit + 7) / 8;
+    }
+
+    public static int pubKeyLen(int privKeyLen) {
+        return privKeyLen * 2 + 1;
+    }
+
+    public static byte[] seed(int orderLenInBit) {
+        int seedLen = (orderLenInBit + 64 + 7) / 8;
+        byte[] seed = new byte[seedLen];
+        SecureRandom random = new SecureRandom();
+        random.nextBytes(seed);
+        return seed;
+    }
+
+    public static void execTaskSerially(Callable<Void> task, int count)
+            throws Exception {
+        for (int i = 0; i < count; i++) {
+            task.call();
+        }
+    }
+
+    public static void execTaskSerially(Callable<Void> task)
+            throws Exception{
+        execTaskSerially(task, 100);
+    }
+
+    public static void execTaskParallelly(Callable<Void> task, int count)
+            throws Exception {
+        List<Callable<Void>> tasks = new ArrayList<>(count);
+        for (int i = 0; i < count; i++) {
+            tasks.add(task);
+        }
+
+        ExecutorService executorService = Executors.newFixedThreadPool(count);
+        try {
+            List<Future<Void>> futures = executorService.invokeAll(tasks);
+            futures.forEach(future -> {
+                try {
+                    future.get();
+                } catch (InterruptedException | ExecutionException e) {
+                    throw new RuntimeException("Run task failed", e);
+                }
+            });
+        } finally {
+            executorService.shutdown();
+        }
+    }
+
+    public static void execTaskParallelly(Callable<Void> task)
+            throws Exception {
+        execTaskParallelly(task, 100);
+    }
+}
