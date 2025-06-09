@@ -232,4 +232,12 @@ final class NativeEC {
     static native void xdhComputePubKey(int curveNID,
             byte[] privKeyIn, byte[] pubKeyOut)
             throws GeneralSecurityException;
+
+    static native void ecdsaSignDigest(int curveNID, byte[] seed,
+            byte[] privKey, byte[] digest, byte[] signatureOut)
+            throws GeneralSecurityException;
+
+    static native int ecdsaVerifySignedDigest(int curveNID,
+            byte[] pubKey, byte[] digest, byte[] signature)
+            throws GeneralSecurityException;
 }

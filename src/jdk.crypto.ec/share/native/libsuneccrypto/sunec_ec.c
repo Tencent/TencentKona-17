@@ -103,3 +103,196 @@ JNIEXPORT void JNICALL Java_sun_security_ec_NativeEC_ecGenKeyPair
         sunec_throw(env, ILLEGAL_STATE_EXCEPTION, "Public key encoding failed");
     }
 }
+
+JNIEXPORT void JNICALL Java_sun_security_ec_NativeEC_ecdsaSignDigest
+  (JNIEnv *env, jclass clazz, jint curveNID, jbyteArray seed,
+   jbyteArray privKey, jbyteArray digest, jbyteArray signatureOut) {
+    EC_KEY *ec_key = NULL;
+    EC_GROUP *group = NULL;
+    BIGNUM *priv_key_bn = NULL;
+    ECDSA_SIG *ecdsa_sig = NULL;
+    unsigned char *seed_data = NULL;
+    unsigned char *priv_key_data = NULL;
+    unsigned char *digest_data = NULL;
+    unsigned char *sig_out_buf = NULL;
+
+    if (seed != NULL) {
+        jsize seed_len = (*env)->GetArrayLength(env, seed);
+        seed_data = (unsigned char *) (*env)->GetByteArrayElements(env, seed, NULL);
+        if (!seed_data || seed_len < 32) {
+            sunec_throw(env, INVALID_ALGO_PARAM_EXCEPTION, "Seed must be at least 32 bytes");
+            goto cleanup;
+        }
+        RAND_seed(seed_data, seed_len);
+    }
+
+    group = EC_GROUP_new_by_curve_name(curveNID);
+    if (!group) {
+        sunec_throw(env, INVALID_ALGO_PARAM_EXCEPTION, "Unsupported curve NID");
+        goto cleanup;
+    }
+    const int order_bits = EC_GROUP_order_bits(group);
+    const int key_size = (order_bits + 7) / 8;
+
+    jsize priv_key_len = (*env)->GetArrayLength(env, privKey);
+    priv_key_data = (unsigned char *)(*env)->GetByteArrayElements(env, privKey, NULL);
+    priv_key_bn = BN_bin2bn(priv_key_data, priv_key_len, NULL);
+    if (priv_key_len != key_size || !priv_key_bn || BN_is_zero(priv_key_bn)) {
+        sunec_throw(env, INVALID_KEY_EXCEPTION, "Invalid private key");
+        goto cleanup;
+    }
+
+    jsize sig_out_len = (*env)->GetArrayLength(env, signatureOut);
+    if (sig_out_len != key_size * 2) {
+        sunec_throw(env, ILLEGAL_STATE_EXCEPTION, "Signature buffer size mismatch");
+        goto cleanup;
+    }
+
+    ec_key = EC_KEY_new();
+    if (!ec_key || !EC_KEY_set_group(ec_key, group) || !EC_KEY_set_private_key(ec_key, priv_key_bn)) {
+        sunec_throw(env, INVALID_KEY_EXCEPTION, "EC key initialization failed");
+        goto cleanup;
+    }
+
+    jsize digest_len = (*env)->GetArrayLength(env, digest);
+    digest_data = (unsigned char *)(*env)->GetByteArrayElements(env, digest, NULL);
+    if (digest_len != key_size) {
+        sunec_throw(env, SIGNATURE_EXCEPTION, "Digest length doesn't match curve size");
+        goto cleanup;
+    }
+
+    ecdsa_sig = ECDSA_do_sign(digest_data, digest_len, ec_key);
+    if (!ecdsa_sig) {
+        sunec_throw(env, SIGNATURE_EXCEPTION, "Signature generation failed");
+        goto cleanup;
+    }
+
+    sig_out_buf = (unsigned char *)(*env)->GetByteArrayElements(env, signatureOut, NULL);
+
+    const BIGNUM *r, *s;
+    ECDSA_SIG_get0(ecdsa_sig, &r, &s);
+
+    BN_bn2binpad(r, sig_out_buf, key_size);
+    BN_bn2binpad(s, sig_out_buf + key_size, key_size);
+
+cleanup:
+    if (sig_out_buf) {
+        (*env)->ReleaseByteArrayElements(env, signatureOut, (jbyte *)sig_out_buf, 0);
+    }
+    if (ec_key) {
+        EC_KEY_free(ec_key);
+    }
+    if (group) {
+        EC_GROUP_free(group);
+    }
+    if (priv_key_bn) {
+        BN_free(priv_key_bn);
+    }
+    if (ecdsa_sig) {
+        ECDSA_SIG_free(ecdsa_sig);
+    }
+    if (seed_data) {
+        (*env)->ReleaseByteArrayElements(env, seed, (jbyte *)seed_data, JNI_ABORT);
+    }
+    if (priv_key_data) {
+        (*env)->ReleaseByteArrayElements(env, privKey, (jbyte *)priv_key_data, JNI_ABORT);
+    }
+    if (digest_data) {
+        (*env)->ReleaseByteArrayElements(env, digest, (jbyte *)digest_data, JNI_ABORT);
+    }
+}
+
+JNIEXPORT jint JNICALL Java_sun_security_ec_NativeEC_ecdsaVerifySignedDigest
+  (JNIEnv *env, jclass clazz, jint curveNID,
+   jbyteArray pubKey, jbyteArray digest, jbyteArray signature) {
+    EC_GROUP *group = NULL;
+    EC_POINT *pub_point = NULL;
+    EC_KEY *ec_key = NULL;
+    ECDSA_SIG *ecdsa_sig = NULL;
+    BIGNUM *r = NULL, *s = NULL;
+    jint result = -1;
+    unsigned char *pub_key_bytes = NULL;
+    unsigned char *sig_bytes = NULL;
+    unsigned char *digest_bytes = NULL;
+
+    group = EC_GROUP_new_by_curve_name(curveNID);
+    if (!group) {
+        sunec_throw(env, INVALID_ALGO_PARAM_EXCEPTION, "Unsupported curve");
+        goto cleanup;
+    }
+
+    jsize pub_key_len = (*env)->GetArrayLength(env, pubKey);
+    pub_key_bytes = (unsigned char *)(*env)->GetByteArrayElements(env, pubKey, NULL);
+    if (!pub_key_bytes || pub_key_len <= 0) {
+        sunec_throw(env, INVALID_KEY_EXCEPTION, "Empty public key");
+        goto cleanup;
+    }
+
+    pub_point = EC_POINT_new(group);
+    if (!pub_point || !EC_POINT_oct2point(group, pub_point, pub_key_bytes, pub_key_len, NULL)) {
+        sunec_throw(env, INVALID_KEY_EXCEPTION, "EC public point initialization failed");
+        goto cleanup;
+    }
+
+    ec_key = EC_KEY_new();
+    if (!ec_key || !EC_KEY_set_group(ec_key, group) || !EC_KEY_set_public_key(ec_key, pub_point)) {
+        sunec_throw(env, INVALID_KEY_EXCEPTION, "EC key initialization failed");
+        goto cleanup;
+    }
+
+    jsize sig_len = (*env)->GetArrayLength(env, signature);
+    sig_bytes = (unsigned char *)(*env)->GetByteArrayElements(env, signature, NULL);
+    if (!sig_bytes) {
+        sunec_throw(env, SIGNATURE_EXCEPTION, "Invalid signature buffer");
+        goto cleanup;
+    }
+
+    const int order_bits = EC_GROUP_order_bits(group);
+    const int key_size = (order_bits + 7) / 8;
+    if (sig_len != key_size * 2) {
+        sunec_throw(env, SIGNATURE_EXCEPTION, "Invalid signature length");
+        goto cleanup;
+    }
+
+    r = BN_bin2bn(sig_bytes, key_size, NULL);
+    s = BN_bin2bn(sig_bytes + key_size, key_size, NULL);
+    if (!r || !s) {
+        sunec_throw(env, SIGNATURE_EXCEPTION, "Signature parsing failed");
+        goto cleanup;
+    }
+
+    ecdsa_sig = ECDSA_SIG_new();
+    if (!ecdsa_sig || !ECDSA_SIG_set0(ecdsa_sig, r, s)) {
+        sunec_throw(env, SIGNATURE_EXCEPTION, "Signature structure error");
+        goto cleanup;
+    }
+
+    jsize digest_len = (*env)->GetArrayLength(env, digest);
+    digest_bytes = (unsigned char *)(*env)->GetByteArrayElements(env, digest, NULL);
+    if (!digest_bytes || digest_len != key_size) {
+        sunec_throw(env, ILLEGAL_STATE_EXCEPTION, "Invalid digest length");
+        goto cleanup;
+    }
+
+    result = ECDSA_do_verify(digest_bytes, digest_len, ecdsa_sig, ec_key);
+    if (result != 1 && result != 0) {
+        sunec_throw(env, SIGNATURE_EXCEPTION, "Verification error");
+    }
+
+cleanup:
+    if (pub_key_bytes) {
+        (*env)->ReleaseByteArrayElements(env, pubKey, (jbyte *)pub_key_bytes, JNI_ABORT);
+    }
+    if (sig_bytes) {
+        (*env)->ReleaseByteArrayElements(env, signature, (jbyte *)sig_bytes, JNI_ABORT);
+    }
+    if (digest_bytes) {
+        (*env)->ReleaseByteArrayElements(env, digest, (jbyte *)digest_bytes, JNI_ABORT);
+    }
+    EC_GROUP_free(group);
+    EC_POINT_free(pub_point);
+    EC_KEY_free(ec_key);
+    ECDSA_SIG_free(ecdsa_sig);
+
+    return result;
+}
