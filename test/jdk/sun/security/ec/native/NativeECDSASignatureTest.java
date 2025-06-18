@@ -21,7 +21,7 @@
  * @test
  * @summary The ECDSA signature based on OpenSSL.
  * @modules jdk.crypto.ec/sun.security.ec
- * @library /test/lib
+ * @library /test/lib /test/jdk/openssl
  * @run junit/othervm NativeECDSASignatureTest
  * @run junit/othervm/policy=test.policy NativeECDSASignatureTest
  * @run junit/othervm -Djdk.sunec.enableNativeCrypto=true NativeECDSASignatureTest
@@ -37,7 +37,7 @@ import java.security.*;
 import java.security.spec.*;
 import java.util.HexFormat;
 
-@EnableOnNativeCrypto
+@EnableOnNativeEC
 public class NativeECDSASignatureTest {
 
     private static final HexFormat HEX = HexFormat.of();

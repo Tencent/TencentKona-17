@@ -21,8 +21,8 @@
  * @test
  * @summary The EC key pair generation based on OpenSSL.
  * @modules jdk.crypto.ec/sun.security.ec
- * @library /test/lib
- * @build jdk.crypto.ec/sun.security.ec.NativeECWrapper NativeECUtil EnableOnNativeCrypto
+ * @library /test/lib /test/jdk/openssl
+ * @build jdk.crypto.ec/sun.security.ec.NativeECWrapper NativeECUtil
  * @run junit/othervm -Djdk.sunec.enableNativeCrypto=true NativeECTest
  * @run junit/othervm/policy=native.policy -Djdk.sunec.enableNativeCrypto=true NativeECTest
  */
@@ -37,7 +37,7 @@ import sun.security.ec.NativeECWrapper;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-@EnableOnNativeCrypto
+@EnableOnNativeEC
 public class NativeECTest {
 
     private static final HexFormat HEX = HexFormat.of();
@@ -368,5 +368,292 @@ public class NativeECTest {
 
         Assertions.assertEquals(1, NativeECWrapper.ecdsaVerifySignedDigest(
                 curveNID, pubKey, alignedDigest, HEX.parseHex(expRHex + expSHex)));
+    }
+
+    @Test
+    public void testECDHKeyAgreement() throws Exception {
+        checkECDHKeyAgreement("secp256r1", 256);
+        checkECDHKeyAgreement("secp384r1", 384);
+        checkECDHKeyAgreement("secp521r1", 521);
+        checkECDHKeyAgreement("curvesm2", 256);
+    }
+
+    private void checkECDHKeyAgreement(String curve, int orderLenInBits)
+            throws Exception {
+        int privKeyLen = NativeECUtil.privKeyLen(orderLenInBits);
+        int pubKeyLen = NativeECUtil.pubKeyLen(privKeyLen);
+        int curveNID = NativeECWrapper.getCurveNID(curve);
+
+        byte[] privKey = new byte[privKeyLen];
+        byte[] pubKey = new byte[pubKeyLen];
+        NativeECWrapper.ecGenKeyPair(curveNID, null, privKey, pubKey);
+
+        byte[] peerPrivKey = new byte[privKeyLen];
+        byte[] peerPubKey = new byte[pubKeyLen];
+        NativeECWrapper.ecGenKeyPair(curveNID, null, peerPrivKey, peerPubKey);
+
+        byte[] sharedKey = new byte[privKeyLen];
+        NativeECWrapper.ecdhDeriveKey(curveNID, privKey, peerPubKey, sharedKey);
+
+        byte[] peerSharedKey = new byte[privKeyLen];
+        NativeECWrapper.ecdhDeriveKey(curveNID, peerPrivKey, pubKey, peerSharedKey);
+
+        // This shared key must not be zero-array.
+        Assertions.assertFalse(Arrays.equals(new byte[sharedKey.length], sharedKey));
+
+        Assertions.assertArrayEquals(sharedKey, peerSharedKey);
+    }
+
+    @Test
+    public void runECDHKeyAgreementSerially() throws Exception {
+        NativeECUtil.execTaskSerially(()-> {
+            testECDHKeyAgreement();
+            return null;
+        });
+    }
+
+    @Test
+    public void runECDHKeyAgreementParallelly() throws Exception {
+        NativeECUtil.execTaskParallelly(()-> {
+            testECDHKeyAgreement();
+            return null;
+        });
+    }
+
+    @Test
+    public void testECDHKeyAgreementWithDiffKeys() throws Exception {
+        int curveNID = NativeECWrapper.getCurveNID("secp256r1");
+
+        byte[] privKey = new byte[32];
+        byte[] pubKey = new byte[32 * 2 + 1];
+        NativeECWrapper.ecGenKeyPair(curveNID, null, privKey, pubKey);
+
+        byte[] peerPrivKey = new byte[32];
+        byte[] peerPubKey = new byte[32 * 2 + 1];
+        NativeECWrapper.ecGenKeyPair(curveNID, null, peerPrivKey, peerPubKey);
+
+        byte[] sharedKey = new byte[32];
+        NativeECWrapper.ecdhDeriveKey(curveNID, privKey, pubKey, sharedKey);
+
+        byte[] peerSharedKey = new byte[32];
+        NativeECWrapper.ecdhDeriveKey(curveNID, peerPrivKey, pubKey, peerSharedKey);
+
+        Assertions.assertFalse(Arrays.equals(sharedKey, peerSharedKey));
+    }
+
+    @Test
+    public void testECDHKeyAgreementWithDiffCurves() throws Exception {
+        int curveNID = NativeECWrapper.getCurveNID("secp256r1");
+        byte[] privKey = new byte[32];
+        byte[] pubKey = new byte[32 * 2 + 1];
+        NativeECWrapper.ecGenKeyPair(curveNID, null, privKey, pubKey);
+
+        int altCurveNID = NativeECWrapper.getCurveNID("curvesm2");
+        byte[] peerAltPrivKey = new byte[32];
+        byte[] peerAltPubKey = new byte[32 * 2 + 1];
+        NativeECWrapper.ecGenKeyPair(altCurveNID, null, peerAltPrivKey, peerAltPubKey);
+
+        byte[] sharedKey = new byte[32];
+        Assertions.assertThrows(KeyException.class,
+                () -> NativeECWrapper.ecdhDeriveKey(
+                        curveNID, privKey, peerAltPubKey, sharedKey));
+    }
+
+    @Test
+    public void testECDHKeyAgreementOnParams() throws Exception {
+        int secp256r1NID = NativeECWrapper.getCurveNID("secp256r1");
+        byte[] secp256r1PrivKey = new byte[32];
+        byte[] secp256r1PubKey = new byte[32 * 2 + 1];
+        NativeECWrapper.ecGenKeyPair(secp256r1NID, null, secp256r1PrivKey, secp256r1PubKey);
+        byte[] secp256r1SharedKey = new byte[32];
+
+        int secp384r1NID = NativeECWrapper.getCurveNID("secp384r1");
+        byte[] secp384r1PrivKey = new byte[48];
+        byte[] secp384r1PubKey = new byte[48 * 2 + 1];
+        NativeECWrapper.ecGenKeyPair(secp384r1NID, null, secp384r1PrivKey, secp384r1PubKey);
+        byte[] secp384r1SharedKey = new byte[48];
+
+        Assertions.assertThrows(InvalidAlgorithmParameterException.class,
+                () -> NativeECWrapper.ecdhDeriveKey(
+                        -1, secp256r1PrivKey, secp256r1PubKey, secp256r1SharedKey));
+
+        Assertions.assertThrows(InvalidKeyException.class,
+                () -> NativeECWrapper.ecdhDeriveKey(
+                        secp256r1NID, secp384r1PrivKey, secp256r1PubKey, secp256r1SharedKey));
+
+        Assertions.assertThrows(InvalidKeyException.class,
+                () -> NativeECWrapper.ecdhDeriveKey(
+                        secp256r1NID, secp256r1PrivKey, secp384r1PubKey, secp256r1SharedKey));
+
+        Assertions.assertThrows(IllegalStateException.class,
+                () -> NativeECWrapper.ecdhDeriveKey(
+                        secp256r1NID, secp256r1PrivKey, secp256r1PubKey, secp384r1SharedKey));
+        Assertions.assertThrows(IllegalStateException.class,
+                () -> NativeECWrapper.ecdhDeriveKey(
+                        secp384r1NID, secp384r1PrivKey, secp384r1PubKey, secp256r1SharedKey));
+    }
+
+    @Test
+    public void testXDHKeyAgreement() throws Exception {
+        checkXDHKeyAgreement("x25519", 32);
+        checkXDHKeyAgreement("x448", 56);
+    }
+
+    private void checkXDHKeyAgreement(String curve, int keyLength)
+            throws Exception {
+        int curveNID = NativeECWrapper.getCurveNID(curve);
+
+        byte[] privKey = new byte[keyLength];
+        new SecureRandom().nextBytes(privKey);
+        byte[] pubKey = new byte[keyLength];
+        NativeECWrapper.xdhComputePubKey(curveNID, privKey, pubKey);
+
+        byte[] peerPrivKey = new byte[keyLength];
+        new SecureRandom().nextBytes(peerPrivKey);
+        byte[] peerPubKey = new byte[keyLength];
+        NativeECWrapper.xdhComputePubKey(curveNID, peerPrivKey, peerPubKey);
+
+        byte[] sharedKey = new byte[keyLength];
+        NativeECWrapper.xdhDeriveKey(curveNID, privKey, peerPubKey, sharedKey);
+
+        byte[] peerSharedKey = new byte[keyLength];
+        NativeECWrapper.xdhDeriveKey(curveNID, peerPrivKey, pubKey, peerSharedKey);
+
+        // This shared key must not be zero-array.
+        Assertions.assertFalse(Arrays.equals(new byte[sharedKey.length], sharedKey));
+
+        Assertions.assertArrayEquals(sharedKey, peerSharedKey);
+    }
+
+    @Test
+    public void runXDHKeyAgreementSerially() throws Exception {
+        NativeECUtil.execTaskSerially(()-> {
+            testXDHKeyAgreement();
+            return null;
+        });
+    }
+
+    @Test
+    public void runXDHKeyAgreementParallelly() throws Exception {
+        NativeECUtil.execTaskParallelly(()-> {
+            testXDHKeyAgreement();
+            return null;
+        });
+    }
+
+    @Test
+    public void testXDHKeyAgreementWithDiffKeys() throws Exception {
+        int curveNID = NativeECWrapper.getCurveNID("x25519");
+
+        byte[] privKey = new byte[32];
+        new SecureRandom().nextBytes(privKey);
+        byte[] pubKey = new byte[32];
+        NativeECWrapper.xdhComputePubKey(curveNID, privKey, pubKey);
+
+        byte[] peerPrivKey = new byte[32];
+        new SecureRandom().nextBytes(peerPrivKey);
+        byte[] peerPubKey = new byte[32];
+        NativeECWrapper.xdhComputePubKey(curveNID, peerPrivKey, peerPubKey);
+
+        byte[] sharedKey = new byte[32];
+        NativeECWrapper.xdhDeriveKey(curveNID, privKey, pubKey, sharedKey);
+
+        byte[] peerSharedKey = new byte[32];
+        NativeECWrapper.xdhDeriveKey(curveNID, peerPrivKey, pubKey, peerSharedKey);
+
+        Assertions.assertFalse(Arrays.equals(sharedKey, peerSharedKey));
+    }
+
+    @Test
+    public void testXDHKeyAgreementWithDiffCurves() throws Exception {
+        int curveNID = NativeECWrapper.getCurveNID("x25519");
+        byte[] privKey = new byte[32];
+        new SecureRandom().nextBytes(privKey);
+        byte[] pubKey = new byte[32];
+        NativeECWrapper.xdhComputePubKey(curveNID, privKey, pubKey);
+
+        int altCurveNID = NativeECWrapper.getCurveNID("x448");
+        byte[] peerAltPrivKey = new byte[56];
+        new SecureRandom().nextBytes(peerAltPrivKey);
+        byte[] peerAltPubKey = new byte[56];
+        NativeECWrapper.xdhComputePubKey(altCurveNID, peerAltPrivKey, peerAltPubKey);
+
+        Assertions.assertThrows(KeyException.class,
+                () -> NativeECWrapper.xdhDeriveKey(
+                        curveNID, privKey, peerAltPubKey, new byte[32]));
+    }
+
+    @Test
+    public void testXDHKeyAgreementOnParams() throws Exception {
+        int x25519NID = NativeECWrapper.getCurveNID("x25519");
+        byte[] x25519PrivKey = new byte[32];
+        new SecureRandom().nextBytes(x25519PrivKey);
+        byte[] x25519PubKey = new byte[32];
+        NativeECWrapper.xdhComputePubKey(x25519NID, x25519PrivKey, x25519PubKey);
+        byte[] x25519SharedKey = new byte[32];
+
+        int x448NID = NativeECWrapper.getCurveNID("x448");
+        byte[] x448PrivKey = new byte[56];
+        new SecureRandom().nextBytes(x448PrivKey);
+        byte[] x448PubKey = new byte[56];
+        NativeECWrapper.xdhComputePubKey(x448NID, x448PrivKey, x448PubKey);
+        byte[] x448SharedKey = new byte[56];
+
+        Assertions.assertThrows(InvalidAlgorithmParameterException.class,
+                () -> NativeECWrapper.xdhDeriveKey(
+                        -1, x25519PrivKey, x25519PubKey, x25519SharedKey));
+
+        Assertions.assertThrows(InvalidKeyException.class,
+                () -> NativeECWrapper.xdhDeriveKey(
+                        x25519NID, x448PrivKey, x25519PubKey, x25519SharedKey));
+
+        Assertions.assertThrows(InvalidKeyException.class,
+                () -> NativeECWrapper.xdhDeriveKey(
+                        x25519NID, x25519PrivKey, x448PubKey, x25519SharedKey));
+
+        Assertions.assertThrows(IllegalStateException.class,
+                () -> NativeECWrapper.xdhDeriveKey(
+                        x25519NID, x25519PrivKey, x25519PubKey, x448SharedKey));
+        Assertions.assertThrows(IllegalStateException.class,
+                () -> NativeECWrapper.xdhDeriveKey(
+                        x448NID, x448PrivKey, x448PubKey, x25519SharedKey));
+    }
+
+    @Test
+    public void testXDHKeyAgreementKAT() throws Exception {
+        checkXDHKeyAgreementKAT(
+                "X25519",
+                "77076D0A7318A57D3C16C17251B26645DF4C2F87EBC0992AB177FBA51DB92C2A",
+                "DE9EDB7D7B7DC1B4D35B61C2ECE435373F8343C85B78674DADFC7E146F882B4F",
+                "4A5D9D5BA4CE2DE1728E3BF480350F25E07E21C947D19E3376F09B3C1E161742");
+        checkXDHKeyAgreementKAT(
+                "X25519",
+                "5DAB087E624A8A4B79E17F8B83800EE66F3BB1292618B6FD1C2F8B27FF88E0EB",
+                "8520F0098930A754748B7DDCB43EF75A0DBF3A0D26381AF4EBA4A98EAA9B4E6A",
+                "4a5d9d5ba4ce2de1728e3bf480350f25e07e21c947d19e3376f09b3c1e161742");
+        checkXDHKeyAgreementKAT(
+                "X448",
+                "9A8F4925D1519F5775CF46B04B5800D4EE9EE8BAE8BC5565D498C28DD9C9BAF574A9419744897391006382A6F127AB1D9AC2D8C0A598726B",
+                "3EB7A829B0CD20F5BCFC0B599B6FECCF6DA4627107BDB0D4F345B43027D8B972FC3E34FB4232A13CA706DCB57AEC3DAE07BDC1C67BF33609",
+                "07FFF4181AC6CC95EC1C16A94A0F74D12DA232CE40A77552281D282BB60C0B56FD2464C335543936521C24403085D59A449A5037514A879D");
+        checkXDHKeyAgreementKAT(
+                "X448",
+                "1C306A7AC2A0E2E0990B294470CBA339E6453772B075811D8FAD0D1D6927C120BB5EE8972B0D3E21374C9C921B09D1B0366F10B65173992D",
+                "9B08F7CC31B7E3E67D22D5AEA121074A273BD2B83DE09C63FAA73D2C22C5D9BBC836647241D953D40C5B12DA88120D53177F80E532C41FA0",
+                "07fff4181ac6cc95ec1c16a94a0f74d12da232ce40a77552281d282bb60c0b56fd2464c335543936521c24403085d59a449a5037514a879d");
+    }
+
+    private void checkXDHKeyAgreementKAT(
+            String curve, String privKeyHex, String peerPubKeyHex,
+            String expectedSharedKeyHex) throws Exception {
+        int curveNID = NativeECWrapper.getCurveNID(curve);
+        byte[] privKey = HEX.parseHex(privKeyHex);
+        byte[] peerPubKey = HEX.parseHex(peerPubKeyHex);
+        byte[] expectedSharedKey = HEX.parseHex(expectedSharedKeyHex);
+
+        byte[] sharedKey = new byte[privKey.length];
+        NativeECWrapper.xdhDeriveKey(curveNID, privKey, peerPubKey, sharedKey);
+        Assertions.assertArrayEquals(expectedSharedKey, sharedKey,
+                HEX.formatHex(sharedKey));
     }
 }

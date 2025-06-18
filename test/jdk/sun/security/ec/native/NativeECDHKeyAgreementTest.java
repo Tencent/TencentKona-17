@@ -22,50 +22,49 @@
  * @summary The EC key pair generator based on OpenSSL.
  * @modules jdk.crypto.ec/sun.security.ec
  * @library /test/lib /test/jdk/openssl
- * @run junit/othervm NativeECKeyPairGeneratorTest
- * @run junit/othervm/policy=test.policy NativeECKeyPairGeneratorTest
- * @run junit/othervm -Djdk.sunec.enableNativeCrypto=true NativeECKeyPairGeneratorTest
- * @run junit/othervm/policy=test.policy -Djdk.sunec.enableNativeCrypto=true NativeECKeyPairGeneratorTest
+ * @run junit/othervm NativeECDHKeyAgreementTest
+ * @run junit/othervm/policy=test.policy NativeECDHKeyAgreementTest
+ * @run junit/othervm -Djdk.sunec.enableNativeCrypto=true NativeECDHKeyAgreementTest
+ * @run junit/othervm/policy=test.policy -Djdk.sunec.enableNativeCrypto=true NativeECDHKeyAgreementTest
  */
 
-import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
-import java.security.interfaces.ECPrivateKey;
 import java.security.spec.ECGenParameterSpec;
-import java.util.Arrays;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import javax.crypto.KeyAgreement;
+
 @EnableOnNativeEC
-public class NativeECKeyPairGeneratorTest {
+public class NativeECDHKeyAgreementTest {
 
     @Test
-    public void testGenKeyPair() throws Exception {
-        checkGenKeyPair("secp256r1", 32);
-        checkGenKeyPair("secp384r1", 48);
-        checkGenKeyPair("secp521r1", 66);
-        checkGenKeyPair("curvesm2", 32);
+    public void testKeyAgreement() throws Exception {
+        checkKeyAgreement("secp256r1");
+        checkKeyAgreement("secp384r1");
+        checkKeyAgreement("secp521r1");
+        checkKeyAgreement("curvesm2");
     }
 
-    @Test
-    public void testGenKeyPairWithUnsupportedCurve() {
-        Assertions.assertThrows(InvalidAlgorithmParameterException.class,
-                ()-> checkGenKeyPair("unknown", 256));
-    }
-
-    private void checkGenKeyPair(String curve, int keyLength) throws Exception {
-        System.out.println(curve + " with " + keyLength);
+    private void checkKeyAgreement(String curve) throws Exception {
+        System.out.println(curve);
 
         KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance("EC");
         keyPairGen.initialize(new ECGenParameterSpec(curve));
         KeyPair keyPair = keyPairGen.generateKeyPair();
+        KeyPair peerKeyPair = keyPairGen.generateKeyPair();
 
-        ECPrivateKey privKey = (ECPrivateKey) keyPair.getPrivate();
-        byte[] sArray = privKey.getS().toByteArray();
-        Assertions.assertTrue(
-                sArray.length <= keyLength || (sArray.length == (keyLength + 1) && sArray[0] == 0),
-                Arrays.toString(sArray));
+        KeyAgreement keyAgreement = KeyAgreement.getInstance("ECDH");
+        keyAgreement.init(keyPair.getPrivate());
+        keyAgreement.doPhase(peerKeyPair.getPublic(), true);
+        byte[] sharedKey = keyAgreement.generateSecret();
+
+        keyAgreement.init(peerKeyPair.getPrivate());
+        keyAgreement.doPhase(keyPair.getPublic(), true);
+        byte[] peerSharedKey = keyAgreement.generateSecret();
+
+        Assertions.assertArrayEquals(sharedKey, peerSharedKey);
     }
 }

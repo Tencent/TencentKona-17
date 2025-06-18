@@ -23,7 +23,7 @@
  *          jdk.sunec.enableNativeCrypto is true and the OpenSSL libcrypto
  *          is available.
  * @modules jdk.crypto.ec/sun.security.ec
- * @library /test/lib
+ * @library /test/lib /test/jdk/openssl
  * @build jdk.crypto.ec/sun.security.ec.NativeECWrapper
  * @run main/othervm EnableNativeEC
  * @run main/othervm/policy=native.policy EnableNativeEC

@@ -26,8 +26,8 @@ import java.lang.annotation.*;
 
 @Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
-@ExtendWith(EnableOnNativeCrypto.NativeCryptoCondition.class)
-public @interface EnableOnNativeCrypto {
+@ExtendWith(EnableOnNativeEC.NativeCryptoCondition.class)
+public @interface EnableOnNativeEC {
 
     class NativeCryptoCondition implements ExecutionCondition {
 

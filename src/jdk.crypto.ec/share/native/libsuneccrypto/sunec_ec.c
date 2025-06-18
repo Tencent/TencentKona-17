@@ -28,6 +28,46 @@
 
 #include "sunec_util.h"
 
+// Validate the given EC point
+int validate_point(const EC_GROUP *group, const EC_POINT *point) {
+    if (group == NULL || point == NULL) {
+        return -1;
+    }
+
+    BN_CTX *bn_ctx = BN_CTX_new();
+    if (bn_ctx == NULL) {
+        return -1;
+    }
+
+    BIGNUM *order = BN_new();
+    EC_POINT *product = EC_POINT_new(group);
+    if (order == NULL || product == NULL) {
+        EC_POINT_free(product);
+        BN_free(order);
+        BN_CTX_free(bn_ctx);
+
+        return -1;
+    }
+
+    int validated = 0;
+
+    // The point must be on the curve, and not the infinity.
+    // The order of the point must be checked.
+    if (EC_GROUP_get_order(group, order, bn_ctx)
+        && EC_POINT_is_on_curve(group, point, bn_ctx)
+        && !EC_POINT_is_at_infinity(group, point)
+        && EC_POINT_mul(group, product, NULL, point, order, bn_ctx)
+        && EC_POINT_is_at_infinity(group, product)) {
+        validated = 1;
+    }
+
+    EC_POINT_free(product);
+    BN_free(order);
+    BN_CTX_free(bn_ctx);
+
+    return validated;
+}
+
 JNIEXPORT void JNICALL Java_sun_security_ec_NativeEC_ecGenKeyPair
   (JNIEnv *env, jclass clazz, jint curveNID, jbyteArray seed,
    jbyteArray privKeyOut, jbyteArray pubKeyOut) {
@@ -295,4 +335,99 @@ cleanup:
     ECDSA_SIG_free(ecdsa_sig);
 
     return result;
+}
+
+JNIEXPORT void JNICALL Java_sun_security_ec_NativeEC_ecdhDeriveKey
+  (JNIEnv *env, jclass clazz, jint curveNID,
+   jbyteArray privKey, jbyteArray peerPubKey, jbyteArray sharedKeyOut) {
+    EC_KEY *ec_key = NULL;
+    EC_GROUP *group = NULL;
+    jbyte *priv_key_data = NULL;
+    BIGNUM *priv_key_bn = NULL;
+    jbyte *peer_pub_key_data = NULL;
+    EC_POINT *peer_pub_point = NULL;
+    jbyte *shared_key_buf = NULL;
+
+    group = EC_GROUP_new_by_curve_name(curveNID);
+    if (!group) {
+        sunec_throw(env, INVALID_ALGO_PARAM_EXCEPTION, "Unsupported curve NID");
+        goto cleanup;
+    }
+
+    int order_bits = EC_GROUP_order_bits(group);
+    int key_size = (order_bits + 7) / 8;
+
+    int priv_key_len = (*env)->GetArrayLength(env, privKey);
+    if (priv_key_len != key_size) {
+        sunec_throw(env, INVALID_KEY_EXCEPTION, "Invalid private key length");
+        goto cleanup;
+    }
+
+    int peer_pub_key_len = (*env)->GetArrayLength(env, peerPubKey);
+    if (peer_pub_key_len != (1 + key_size * 2)) {
+        sunec_throw(env, INVALID_KEY_EXCEPTION, "Invalid public key length");
+        goto cleanup;
+    }
+
+    priv_key_data = (*env)->GetByteArrayElements(env, privKey, NULL);
+    priv_key_bn = BN_bin2bn((unsigned char *)priv_key_data, priv_key_len, NULL);
+    if (!priv_key_bn) {
+        sunec_throw(env, INVALID_KEY_EXCEPTION, "Empty private key");
+        goto cleanup;
+    }
+
+    ec_key = EC_KEY_new();
+    if (!ec_key || !EC_KEY_set_group(ec_key, group)
+        || !EC_KEY_set_private_key(ec_key, priv_key_bn)) {
+        sunec_throw(env, INVALID_KEY_EXCEPTION, "EC key initialization failed");
+        goto cleanup;
+    }
+
+    peer_pub_key_data = (*env)->GetByteArrayElements(env, peerPubKey, NULL);
+    peer_pub_point = EC_POINT_new(group);
+    if (!peer_pub_point
+        || !EC_POINT_oct2point(group, peer_pub_point, (unsigned char *)peer_pub_key_data, peer_pub_key_len, NULL)) {
+        sunec_throw(env, INVALID_KEY_EXCEPTION, "Public point initialization failed");
+        goto cleanup;
+    }
+
+    if (!validate_point(group, peer_pub_point)) {
+        sunec_throw(env, INVALID_KEY_EXCEPTION, "Invalid public point");
+        goto cleanup;
+    }
+
+    shared_key_buf = (*env)->GetByteArrayElements(env, sharedKeyOut, NULL);
+    if ((*env)->GetArrayLength(env, sharedKeyOut) != key_size) {
+        sunec_throw(env, ILLEGAL_STATE_EXCEPTION, "Shared key buffer size mismatch");
+        goto cleanup;
+    }
+
+    int actual_shared_key_len = ECDH_compute_key(shared_key_buf, key_size, peer_pub_point, ec_key, NULL);
+    if (actual_shared_key_len != key_size) {
+        sunec_throw(env, INVALID_KEY_EXCEPTION, "Derive key failed");
+        goto cleanup;
+    }
+
+cleanup:
+    if (shared_key_buf) {
+        (*env)->ReleaseByteArrayElements(env, sharedKeyOut, (jbyte *)shared_key_buf, 0);
+    }
+    if (peer_pub_point) {
+        EC_POINT_free(peer_pub_point);
+    }
+    if (ec_key) {
+        EC_KEY_free(ec_key);
+    }
+    if (priv_key_bn) {
+        BN_free(priv_key_bn);
+    }
+    if (group) {
+        EC_GROUP_free(group);
+    }
+    if (peer_pub_key_data) {
+        (*env)->ReleaseByteArrayElements(env, peerPubKey, peer_pub_key_data, JNI_ABORT);
+    }
+    if (priv_key_data) {
+        (*env)->ReleaseByteArrayElements(env, privKey, priv_key_data, JNI_ABORT);
+    }
 }

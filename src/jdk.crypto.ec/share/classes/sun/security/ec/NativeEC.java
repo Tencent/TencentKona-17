@@ -47,7 +47,7 @@ final class NativeEC {
     // Load lib opensslcrypto
     @SuppressWarnings("removal")
     private static boolean loadOpenSSLCryptoLib() {
-        // The absolute path to libopensslcrypto file
+        // The absolute path to OpenSSL libcrypto file
         String opensslCryptoLibPath = GetPropertyAction.privilegedGetProperty(
                   "jdk.openssl.cryptoLibPath");
 
@@ -239,5 +239,13 @@ final class NativeEC {
 
     static native int ecdsaVerifySignedDigest(int curveNID,
             byte[] pubKey, byte[] digest, byte[] signature)
+            throws GeneralSecurityException;
+
+    static native void ecdhDeriveKey(int curveNID,
+            byte[] privKey, byte[] peerPubKey, byte[] sharedKeyOut)
+            throws GeneralSecurityException;
+
+    static native void xdhDeriveKey(int curveNID,
+            byte[] privKey, byte[] peerPubKey, byte[] sharedKeyOut)
             throws GeneralSecurityException;
 }

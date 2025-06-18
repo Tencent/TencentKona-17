@@ -57,4 +57,16 @@ public class NativeECWrapper {
             throws GeneralSecurityException {
         return NativeEC.ecdsaVerifySignedDigest(curveNID, pubKey, digest, signature);
     }
+
+    public static void ecdhDeriveKey(int curveNID,
+            byte[] privKey, byte[] peerPubKey, byte[] sharedKeyOut)
+            throws GeneralSecurityException {
+        NativeEC.ecdhDeriveKey(curveNID, privKey, peerPubKey, sharedKeyOut);
+    }
+
+    public static void xdhDeriveKey(int curveNID,
+            byte[] privKey, byte[] peerPubKey, byte[] sharedKeyOut)
+            throws GeneralSecurityException {
+        NativeEC.xdhDeriveKey(curveNID, privKey, peerPubKey, sharedKeyOut);
+    }
 }

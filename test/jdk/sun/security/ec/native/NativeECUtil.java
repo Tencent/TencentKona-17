@@ -23,13 +23,12 @@ import java.nio.file.Paths;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.concurrent.*;
 
 public class NativeECUtil {
 
     public static boolean nativeCryptoSupported() {
-        String opensslCryptoPath = opensslCryptoPath();
+        String opensslCryptoPath = OpenSSLUtil.opensslCryptoPath();
         boolean supported = nativeECSupported() && opensslCryptoPath != null;
         if (supported) {
             System.setProperty("jdk.openssl.cryptoLibPath", opensslCryptoPath);
@@ -41,31 +40,6 @@ public class NativeECUtil {
         Path jdkLibDir = Paths.get(System.getProperty("test.jdk")).resolve("lib");
         Path suneccryptoLinuxPath = jdkLibDir.resolve("libsuneccrypto.so");
         return Files.exists(suneccryptoLinuxPath);
-    }
-
-    private static String opensslCryptoPath() {
-        String osName = System.getProperty("os.name").toLowerCase(Locale.ROOT);
-        String os = "unsupported";
-        String ext = "unsupported";
-        if (osName.contains("linux")) {
-            os = "linux";
-            ext = ".so";
-        }
-
-        String archName = System.getProperty("os.arch").toLowerCase(Locale.ROOT);
-        String arch = "unsupported";
-        if (archName.contains("x86_64") || archName.contains("amd64")) {
-            arch = "x86_64";
-        } else if (archName.contains("aarch64") || archName.contains("arm64")) {
-            arch = "aarch64";
-        }
-
-        String platformName = os + "-" + arch;
-        String libName = "libopensslcrypto" + ext;
-
-        Path testSrcDir = Paths.get(System.getProperty("test.src"));
-        Path libPath = testSrcDir.resolve("lib").resolve(platformName).resolve(libName);
-        return Files.exists(libPath) ? libPath.toString() : null;
     }
 
     public static int privKeyLen(int orderLenInBit) {

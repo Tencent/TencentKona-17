@@ -21,7 +21,7 @@
  * @test
  * @summary The EC key pair generator based on OpenSSL.
  * @modules jdk.crypto.ec/sun.security.ec
- * @library /test/lib
+ * @library /test/lib /test/jdk/openssl
  * @run junit/othervm NativeXDHKeyPairGeneratorTest
  * @run junit/othervm/policy=test.policy NativeXDHKeyPairGeneratorTest
  * @run junit/othervm -Djdk.sunec.enableNativeCrypto=true NativeXDHKeyPairGeneratorTest
@@ -38,7 +38,7 @@ import java.security.interfaces.XECPrivateKey;
 import java.security.spec.NamedParameterSpec;
 import java.util.Arrays;
 
-@EnableOnNativeCrypto
+@EnableOnNativeEC
 public class NativeXDHKeyPairGeneratorTest {
 
     @Test
