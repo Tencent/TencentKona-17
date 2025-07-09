@@ -37,7 +37,7 @@ import java.security.*;
 import java.security.spec.*;
 import java.util.HexFormat;
 
-@EnableOnNativeEC
+@EnableOnNativeSunEC
 public class NativeECDSASignatureTest {
 
     private static final HexFormat HEX = HexFormat.of();

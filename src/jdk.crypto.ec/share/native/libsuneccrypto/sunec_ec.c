@@ -43,7 +43,7 @@ int validate_point(const EC_GROUP *group, const EC_POINT *point) {
     EC_POINT *product = EC_POINT_new(group);
     if (order == NULL || product == NULL) {
         EC_POINT_free(product);
-        BN_free(order);
+        BN_clear_free(order);
         BN_CTX_free(bn_ctx);
 
         return -1;
@@ -62,13 +62,13 @@ int validate_point(const EC_GROUP *group, const EC_POINT *point) {
     }
 
     EC_POINT_free(product);
-    BN_free(order);
+    BN_clear_free(order);
     BN_CTX_free(bn_ctx);
 
     return validated;
 }
 
-JNIEXPORT void JNICALL Java_sun_security_ec_NativeEC_ecGenKeyPair
+JNIEXPORT void JNICALL Java_sun_security_ec_NativeSunEC_ecGenKeyPair
   (JNIEnv *env, jclass clazz, jint curveNID, jbyteArray seed,
    jbyteArray privKeyOut, jbyteArray pubKeyOut) {
     EC_KEY *ec_key = EC_KEY_new_by_curve_name(curveNID);
@@ -144,7 +144,7 @@ JNIEXPORT void JNICALL Java_sun_security_ec_NativeEC_ecGenKeyPair
     }
 }
 
-JNIEXPORT void JNICALL Java_sun_security_ec_NativeEC_ecdsaSignDigest
+JNIEXPORT void JNICALL Java_sun_security_ec_NativeSunEC_ecdsaSignDigest
   (JNIEnv *env, jclass clazz, jint curveNID, jbyteArray seed,
    jbyteArray privKey, jbyteArray digest, jbyteArray signatureOut) {
     EC_KEY *ec_key = NULL;
@@ -226,7 +226,7 @@ cleanup:
         EC_GROUP_free(group);
     }
     if (priv_key_bn) {
-        BN_free(priv_key_bn);
+        BN_clear_free(priv_key_bn);
     }
     if (ecdsa_sig) {
         ECDSA_SIG_free(ecdsa_sig);
@@ -242,7 +242,7 @@ cleanup:
     }
 }
 
-JNIEXPORT jint JNICALL Java_sun_security_ec_NativeEC_ecdsaVerifySignedDigest
+JNIEXPORT jint JNICALL Java_sun_security_ec_NativeSunEC_ecdsaVerifySignedDigest
   (JNIEnv *env, jclass clazz, jint curveNID,
    jbyteArray pubKey, jbyteArray digest, jbyteArray signature) {
     EC_GROUP *group = NULL;
@@ -337,7 +337,7 @@ cleanup:
     return result;
 }
 
-JNIEXPORT void JNICALL Java_sun_security_ec_NativeEC_ecdhDeriveKey
+JNIEXPORT void JNICALL Java_sun_security_ec_NativeSunEC_ecdhDeriveKey
   (JNIEnv *env, jclass clazz, jint curveNID,
    jbyteArray privKey, jbyteArray peerPubKey, jbyteArray sharedKeyOut) {
     EC_KEY *ec_key = NULL;
@@ -419,7 +419,7 @@ cleanup:
         EC_KEY_free(ec_key);
     }
     if (priv_key_bn) {
-        BN_free(priv_key_bn);
+        BN_clear_free(priv_key_bn);
     }
     if (group) {
         EC_GROUP_free(group);

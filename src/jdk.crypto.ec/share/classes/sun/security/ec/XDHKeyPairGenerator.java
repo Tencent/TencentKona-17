@@ -108,7 +108,7 @@ public class XDHKeyPairGenerator extends KeyPairGeneratorSpi {
         byte[] cloned = privateKey.clone();
 
         BigInteger publicKey = null;
-        if (NativeEC.useNativeXDH(ops.getParameters().getName())) {
+        if (NativeSunEC.useNativeXDH(ops.getParameters().getName())) {
             publicKey = computePublicNative(cloned);
         } else {
             publicKey = ops.computePublic(cloned);
@@ -128,14 +128,14 @@ public class XDHKeyPairGenerator extends KeyPairGeneratorSpi {
     }
 
     private BigInteger computePublicNative(byte[] privKey) {
-        int curveNID = NativeEC.getXECCurveNID(ops.getParameters().getName());
+        int curveNID = NativeSunEC.getXECCurveNID(ops.getParameters().getName());
         if (curveNID == -1) {
             return null;
         }
 
         byte[] publicKeyOut = new byte[privKey.length];
         try {
-            NativeEC.xdhComputePubKey(curveNID, privKey, publicKeyOut);
+            NativeSunEC.xdhComputePubKey(curveNID, privKey, publicKeyOut);
         } catch (Exception e) {
             throw new ProviderException(e);
         }

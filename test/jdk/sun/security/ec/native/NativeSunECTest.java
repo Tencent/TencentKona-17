@@ -19,12 +19,12 @@
 
 /*
  * @test
- * @summary The EC key pair generation based on OpenSSL.
+ * @summary The EC crypto based on OpenSSL.
  * @modules jdk.crypto.ec/sun.security.ec
  * @library /test/lib /test/jdk/openssl
- * @build jdk.crypto.ec/sun.security.ec.NativeECWrapper NativeECUtil
- * @run junit/othervm -Djdk.sunec.enableNativeCrypto=true NativeECTest
- * @run junit/othervm/policy=native.policy -Djdk.sunec.enableNativeCrypto=true NativeECTest
+ * @build jdk.crypto.ec/sun.security.ec.NativeSunECWrapper NativeSunECUtil
+ * @run junit/othervm -Djdk.sunec.enableNativeCrypto=true NativeSunECTest
+ * @run junit/othervm/policy=native.policy -Djdk.sunec.enableNativeCrypto=true NativeSunECTest
  */
 
 import java.nio.charset.StandardCharsets;
@@ -32,13 +32,13 @@ import java.security.*;
 import java.util.Arrays;
 import java.util.HexFormat;
 
-import sun.security.ec.NativeECWrapper;
+import sun.security.ec.NativeSunECWrapper;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-@EnableOnNativeEC
-public class NativeECTest {
+@EnableOnNativeSunEC
+public class NativeSunECTest {
 
     private static final HexFormat HEX = HexFormat.of();
     private static final byte[] MESSAGE = "test".getBytes(StandardCharsets.UTF_8);
@@ -60,7 +60,7 @@ public class NativeECTest {
 
     @Test
     public void runECGenKeyPairSerially() throws Exception {
-        NativeECUtil.execTaskSerially(()-> {
+        NativeSunECUtil.execTaskSerially(()-> {
             testECGenKeyPair();
             return null;
         });
@@ -68,7 +68,7 @@ public class NativeECTest {
 
     @Test
     public void runECGenKeyPairParallelly() throws Exception {
-        NativeECUtil.execTaskParallelly(()-> {
+        NativeSunECUtil.execTaskParallelly(()-> {
             testECGenKeyPair();
             return null;
         });
@@ -85,14 +85,14 @@ public class NativeECTest {
     private void checkECGenKeyPair(
             String curve, int orderLenInBits, boolean needSeed)
             throws Exception {
-        int privKeyLen = NativeECUtil.privKeyLen(orderLenInBits);
-        int pubKeyLen = NativeECUtil.pubKeyLen(privKeyLen);
-        byte[] seed = needSeed ? NativeECUtil.seed(orderLenInBits) : null;
+        int privKeyLen = NativeSunECUtil.privKeyLen(orderLenInBits);
+        int pubKeyLen = NativeSunECUtil.pubKeyLen(privKeyLen);
+        byte[] seed = needSeed ? NativeSunECUtil.seed(orderLenInBits) : null;
 
-        int curveNID = NativeECWrapper.getCurveNID(curve);
+        int curveNID = NativeSunECWrapper.getCurveNID(curve);
         byte[] privKey = new byte[privKeyLen];
         byte[] pubKey = new byte[pubKeyLen];
-        NativeECWrapper.ecGenKeyPair(curveNID, seed, privKey, pubKey);
+        NativeSunECWrapper.ecGenKeyPair(curveNID, seed, privKey, pubKey);
 
         // The keys must not be zero-arrays
         Assertions.assertFalse(Arrays.equals(new byte[privKeyLen], privKey));
@@ -110,7 +110,7 @@ public class NativeECTest {
 
     @Test
     public void runXDHComputePubKeySerially() throws Exception {
-        NativeECUtil.execTaskSerially(()-> {
+        NativeSunECUtil.execTaskSerially(()-> {
             testXDHComputePubKey();
             return null;
         });
@@ -118,7 +118,7 @@ public class NativeECTest {
 
     @Test
     public void runXDHComputePubKeyParallelly() throws Exception {
-        NativeECUtil.execTaskParallelly(()-> {
+        NativeSunECUtil.execTaskParallelly(()-> {
             testXDHComputePubKey();
             return null;
         });
@@ -135,9 +135,9 @@ public class NativeECTest {
         byte[] privKey = new byte[keyLength];
         new SecureRandom().nextBytes(privKey);
 
-        int curveNID = NativeECWrapper.getCurveNID(curve);
+        int curveNID = NativeSunECWrapper.getCurveNID(curve);
         byte[] pubKey = new byte[keyLength];
-        NativeECWrapper.xdhComputePubKey(curveNID, privKey, pubKey);
+        NativeSunECWrapper.xdhComputePubKey(curveNID, privKey, pubKey);
 
         // The keys must not be zero-arrays
         Assertions.assertFalse(Arrays.equals(new byte[privKey.length], privKey));
@@ -167,7 +167,7 @@ public class NativeECTest {
 
     @Test
     public void runECDSASignatureSerially() throws Exception {
-        NativeECUtil.execTaskSerially(()-> {
+        NativeSunECUtil.execTaskSerially(()-> {
             testECDSASignature();
             return null;
         });
@@ -175,7 +175,7 @@ public class NativeECTest {
 
     @Test
     public void runECDSASignatureParallelly() throws Exception {
-        NativeECUtil.execTaskParallelly(()-> {
+        NativeSunECUtil.execTaskParallelly(()-> {
             testECDSASignature();
             return null;
         });
@@ -184,73 +184,73 @@ public class NativeECTest {
     private void checkECDSASignature(String md, String curve,
             int orderLenInBits, boolean needSeed)
             throws Exception {
-        int privKeyLen = NativeECUtil.privKeyLen(orderLenInBits);
-        int pubKeyLen = NativeECUtil.pubKeyLen(privKeyLen);
+        int privKeyLen = NativeSunECUtil.privKeyLen(orderLenInBits);
+        int pubKeyLen = NativeSunECUtil.pubKeyLen(privKeyLen);
 
         byte[] digest = MessageDigest.getInstance(md).digest(MESSAGE);
         byte[] alignedDigest = new byte[privKeyLen];
         int length = Math.min(digest.length, alignedDigest.length);
         System.arraycopy(digest, 0, alignedDigest, alignedDigest.length - length, length);
 
-        byte[] seed = needSeed ? NativeECUtil.seed(orderLenInBits) : null;
+        byte[] seed = needSeed ? NativeSunECUtil.seed(orderLenInBits) : null;
 
-        int curveNID = NativeECWrapper.getCurveNID(curve);
+        int curveNID = NativeSunECWrapper.getCurveNID(curve);
         byte[] privKey = new byte[privKeyLen];
         byte[] pubKey = new byte[pubKeyLen];
-        NativeECWrapper.ecGenKeyPair(curveNID, seed, privKey, pubKey);
+        NativeSunECWrapper.ecGenKeyPair(curveNID, seed, privKey, pubKey);
 
         byte[] signature = new byte[privKeyLen * 2];
-        NativeECWrapper.ecdsaSignDigest(curveNID, seed, privKey, alignedDigest, signature);
+        NativeSunECWrapper.ecdsaSignDigest(curveNID, seed, privKey, alignedDigest, signature);
 
         // This signature must not be zero-array.
         Assertions.assertFalse(Arrays.equals(new byte[signature.length], signature));
 
-        int verified = NativeECWrapper.ecdsaVerifySignedDigest(
+        int verified = NativeSunECWrapper.ecdsaVerifySignedDigest(
                 curveNID, pubKey, alignedDigest, signature);
         Assertions.assertEquals(1, verified);
     }
 
     @Test
     public void testECDSASignatureWithDiffKeys() throws Exception {
-        int curveNID = NativeECWrapper.getCurveNID("secp256r1");
+        int curveNID = NativeSunECWrapper.getCurveNID("secp256r1");
 
         byte[] privKeyA = new byte[32];
         byte[] pubKeyA = new byte[32 * 2 + 1];
-        NativeECWrapper.ecGenKeyPair(curveNID, null, privKeyA, pubKeyA);
+        NativeSunECWrapper.ecGenKeyPair(curveNID, null, privKeyA, pubKeyA);
 
         byte[] privKeyB = new byte[32];
         byte[] pubKeyB = new byte[32 * 2 + 1];
-        NativeECWrapper.ecGenKeyPair(curveNID, null, privKeyB, pubKeyB);
+        NativeSunECWrapper.ecGenKeyPair(curveNID, null, privKeyB, pubKeyB);
 
         byte[] digest = MessageDigest.getInstance("SHA-256").digest(MESSAGE);
 
         byte[] signature = new byte[32 * 2];
-        NativeECWrapper.ecdsaSignDigest(curveNID, null, privKeyA, digest, signature);
+        NativeSunECWrapper.ecdsaSignDigest(curveNID, null, privKeyA, digest, signature);
 
-        int verified = NativeECWrapper.ecdsaVerifySignedDigest(
+        int verified = NativeSunECWrapper.ecdsaVerifySignedDigest(
                 curveNID, pubKeyB, digest, signature);
         Assertions.assertTrue(verified != 1);
     }
 
     @Test
     public void testECDSASignatureWithDiffCurves() throws Exception {
-        int curveNID = NativeECWrapper.getCurveNID("secp256r1");
+        int curveNID = NativeSunECWrapper.getCurveNID("secp256r1");
         byte[] privKeyA = new byte[32];
         byte[] pubKeyA = new byte[32 * 2 + 1];
-        NativeECWrapper.ecGenKeyPair(curveNID, null, privKeyA, pubKeyA);
+        NativeSunECWrapper.ecGenKeyPair(curveNID, null, privKeyA, pubKeyA);
 
         byte[] digest = MessageDigest.getInstance("SHA-256").digest(MESSAGE);
 
         byte[] signature = new byte[32 * 2];
-        NativeECWrapper.ecdsaSignDigest(curveNID, null, privKeyA, digest, signature);
+        NativeSunECWrapper.ecdsaSignDigest(curveNID, null, privKeyA, digest, signature);
 
-        int altCurveNID = NativeECWrapper.getCurveNID("secp384r1");
+        int altCurveNID = NativeSunECWrapper.getCurveNID("secp384r1");
         byte[] altPrivKey = new byte[48];
         byte[] altPubKey = new byte[48 * 2 + 1];
-        NativeECWrapper.ecGenKeyPair(altCurveNID, null, altPrivKey, altPubKey);
+        NativeSunECWrapper.ecGenKeyPair(altCurveNID, null, altPrivKey, altPubKey);
 
         Assertions.assertThrows(KeyException.class,
-                () -> NativeECWrapper.ecdsaVerifySignedDigest(
+                () -> NativeSunECWrapper.ecdsaVerifySignedDigest(
                         curveNID, altPubKey, digest, signature));
     }
 
@@ -259,46 +259,46 @@ public class NativeECTest {
         byte[] sha256Digest = MessageDigest.getInstance("SHA-256").digest(MESSAGE);
         byte[] sha384Digest = MessageDigest.getInstance("SHA-384").digest(MESSAGE);
 
-        int secp256r1CurveNID = NativeECWrapper.getCurveNID("secp256r1");
+        int secp256r1CurveNID = NativeSunECWrapper.getCurveNID("secp256r1");
         byte[] secp256r1PrivKey = new byte[32];
         byte[] secp256r1PubKey = new byte[32 * 2 + 1];
-        NativeECWrapper.ecGenKeyPair(secp256r1CurveNID, null, secp256r1PrivKey, secp256r1PubKey);
+        NativeSunECWrapper.ecGenKeyPair(secp256r1CurveNID, null, secp256r1PrivKey, secp256r1PubKey);
         byte[] secp256r1Signature = new byte[32 * 2];
-        NativeECWrapper.ecdsaSignDigest(
+        NativeSunECWrapper.ecdsaSignDigest(
                 secp256r1CurveNID, null, secp256r1PrivKey, sha256Digest, secp256r1Signature);
 
-        int secp384r1CurveNID = NativeECWrapper.getCurveNID("secp384r1");
+        int secp384r1CurveNID = NativeSunECWrapper.getCurveNID("secp384r1");
         byte[] secp384r1PrivKey = new byte[48];
         byte[] secp384r1PubKey = new byte[48 * 2 + 1];
-        NativeECWrapper.ecGenKeyPair(secp384r1CurveNID, null, secp384r1PrivKey, secp384r1PubKey);
+        NativeSunECWrapper.ecGenKeyPair(secp384r1CurveNID, null, secp384r1PrivKey, secp384r1PubKey);
         byte[] secp384r1Signature = new byte[48 * 2];
-        NativeECWrapper.ecdsaSignDigest(
+        NativeSunECWrapper.ecdsaSignDigest(
                 secp384r1CurveNID, null, secp384r1PrivKey, sha384Digest, secp384r1Signature);
 
         Assertions.assertThrows(InvalidAlgorithmParameterException.class,
-                () -> NativeECWrapper.ecdsaSignDigest(
+                () -> NativeSunECWrapper.ecdsaSignDigest(
                         -1, null, secp256r1PrivKey, sha256Digest, secp256r1Signature));
         Assertions.assertThrows(KeyException.class,
-                () -> NativeECWrapper.ecdsaSignDigest(
+                () -> NativeSunECWrapper.ecdsaSignDigest(
                         secp256r1CurveNID, null, secp384r1PrivKey, sha256Digest, secp256r1Signature));
         Assertions.assertThrows(IllegalStateException.class,
-                () -> NativeECWrapper.ecdsaSignDigest(
+                () -> NativeSunECWrapper.ecdsaSignDigest(
                         secp256r1CurveNID, null, secp256r1PrivKey, sha256Digest, secp384r1Signature));
         Assertions.assertThrows(IllegalStateException.class,
-                () -> NativeECWrapper.ecdsaSignDigest(
+                () -> NativeSunECWrapper.ecdsaSignDigest(
                         secp384r1CurveNID, null, secp384r1PrivKey, sha256Digest, secp256r1Signature));
 
         Assertions.assertThrows(InvalidAlgorithmParameterException.class,
-                () -> NativeECWrapper.ecdsaVerifySignedDigest(
+                () -> NativeSunECWrapper.ecdsaVerifySignedDigest(
                         -1, secp256r1PubKey, sha256Digest, secp256r1Signature));
         Assertions.assertThrows(KeyException.class,
-                () -> NativeECWrapper.ecdsaVerifySignedDigest(
+                () -> NativeSunECWrapper.ecdsaVerifySignedDigest(
                         secp256r1CurveNID, secp384r1PubKey, sha256Digest, secp256r1Signature));
         Assertions.assertThrows(SignatureException.class,
-                () -> NativeECWrapper.ecdsaVerifySignedDigest(
+                () -> NativeSunECWrapper.ecdsaVerifySignedDigest(
                         secp256r1CurveNID, secp256r1PubKey, sha256Digest, secp384r1Signature));
         Assertions.assertThrows(SignatureException.class,
-                () -> NativeECWrapper.ecdsaVerifySignedDigest(
+                () -> NativeSunECWrapper.ecdsaVerifySignedDigest(
                         secp384r1CurveNID, secp384r1PubKey, sha384Digest, secp256r1Signature));
     }
 
@@ -358,15 +358,15 @@ public class NativeECTest {
         int length = Math.min(digest.length, alignedDigest.length);
         System.arraycopy(digest, 0, alignedDigest, alignedDigest.length - length, length);
 
-        int curveNID = NativeECWrapper.getCurveNID(curve);
+        int curveNID = NativeSunECWrapper.getCurveNID(curve);
 
         byte[] sig = new byte[privKey.length * 2];
-        NativeECWrapper.ecdsaSignDigest(curveNID, null, privKey, alignedDigest, sig);
+        NativeSunECWrapper.ecdsaSignDigest(curveNID, null, privKey, alignedDigest, sig);
 
-        Assertions.assertEquals(1, NativeECWrapper.ecdsaVerifySignedDigest(
+        Assertions.assertEquals(1, NativeSunECWrapper.ecdsaVerifySignedDigest(
                 curveNID, pubKey, alignedDigest, sig));
 
-        Assertions.assertEquals(1, NativeECWrapper.ecdsaVerifySignedDigest(
+        Assertions.assertEquals(1, NativeSunECWrapper.ecdsaVerifySignedDigest(
                 curveNID, pubKey, alignedDigest, HEX.parseHex(expRHex + expSHex)));
     }
 
@@ -380,23 +380,23 @@ public class NativeECTest {
 
     private void checkECDHKeyAgreement(String curve, int orderLenInBits)
             throws Exception {
-        int privKeyLen = NativeECUtil.privKeyLen(orderLenInBits);
-        int pubKeyLen = NativeECUtil.pubKeyLen(privKeyLen);
-        int curveNID = NativeECWrapper.getCurveNID(curve);
+        int privKeyLen = NativeSunECUtil.privKeyLen(orderLenInBits);
+        int pubKeyLen = NativeSunECUtil.pubKeyLen(privKeyLen);
+        int curveNID = NativeSunECWrapper.getCurveNID(curve);
 
         byte[] privKey = new byte[privKeyLen];
         byte[] pubKey = new byte[pubKeyLen];
-        NativeECWrapper.ecGenKeyPair(curveNID, null, privKey, pubKey);
+        NativeSunECWrapper.ecGenKeyPair(curveNID, null, privKey, pubKey);
 
         byte[] peerPrivKey = new byte[privKeyLen];
         byte[] peerPubKey = new byte[pubKeyLen];
-        NativeECWrapper.ecGenKeyPair(curveNID, null, peerPrivKey, peerPubKey);
+        NativeSunECWrapper.ecGenKeyPair(curveNID, null, peerPrivKey, peerPubKey);
 
         byte[] sharedKey = new byte[privKeyLen];
-        NativeECWrapper.ecdhDeriveKey(curveNID, privKey, peerPubKey, sharedKey);
+        NativeSunECWrapper.ecdhDeriveKey(curveNID, privKey, peerPubKey, sharedKey);
 
         byte[] peerSharedKey = new byte[privKeyLen];
-        NativeECWrapper.ecdhDeriveKey(curveNID, peerPrivKey, pubKey, peerSharedKey);
+        NativeSunECWrapper.ecdhDeriveKey(curveNID, peerPrivKey, pubKey, peerSharedKey);
 
         // This shared key must not be zero-array.
         Assertions.assertFalse(Arrays.equals(new byte[sharedKey.length], sharedKey));
@@ -406,7 +406,7 @@ public class NativeECTest {
 
     @Test
     public void runECDHKeyAgreementSerially() throws Exception {
-        NativeECUtil.execTaskSerially(()-> {
+        NativeSunECUtil.execTaskSerially(()-> {
             testECDHKeyAgreement();
             return null;
         });
@@ -414,7 +414,7 @@ public class NativeECTest {
 
     @Test
     public void runECDHKeyAgreementParallelly() throws Exception {
-        NativeECUtil.execTaskParallelly(()-> {
+        NativeSunECUtil.execTaskParallelly(()-> {
             testECDHKeyAgreement();
             return null;
         });
@@ -422,74 +422,74 @@ public class NativeECTest {
 
     @Test
     public void testECDHKeyAgreementWithDiffKeys() throws Exception {
-        int curveNID = NativeECWrapper.getCurveNID("secp256r1");
+        int curveNID = NativeSunECWrapper.getCurveNID("secp256r1");
 
         byte[] privKey = new byte[32];
         byte[] pubKey = new byte[32 * 2 + 1];
-        NativeECWrapper.ecGenKeyPair(curveNID, null, privKey, pubKey);
+        NativeSunECWrapper.ecGenKeyPair(curveNID, null, privKey, pubKey);
 
         byte[] peerPrivKey = new byte[32];
         byte[] peerPubKey = new byte[32 * 2 + 1];
-        NativeECWrapper.ecGenKeyPair(curveNID, null, peerPrivKey, peerPubKey);
+        NativeSunECWrapper.ecGenKeyPair(curveNID, null, peerPrivKey, peerPubKey);
 
         byte[] sharedKey = new byte[32];
-        NativeECWrapper.ecdhDeriveKey(curveNID, privKey, pubKey, sharedKey);
+        NativeSunECWrapper.ecdhDeriveKey(curveNID, privKey, pubKey, sharedKey);
 
         byte[] peerSharedKey = new byte[32];
-        NativeECWrapper.ecdhDeriveKey(curveNID, peerPrivKey, pubKey, peerSharedKey);
+        NativeSunECWrapper.ecdhDeriveKey(curveNID, peerPrivKey, pubKey, peerSharedKey);
 
         Assertions.assertFalse(Arrays.equals(sharedKey, peerSharedKey));
     }
 
     @Test
     public void testECDHKeyAgreementWithDiffCurves() throws Exception {
-        int curveNID = NativeECWrapper.getCurveNID("secp256r1");
+        int curveNID = NativeSunECWrapper.getCurveNID("secp256r1");
         byte[] privKey = new byte[32];
         byte[] pubKey = new byte[32 * 2 + 1];
-        NativeECWrapper.ecGenKeyPair(curveNID, null, privKey, pubKey);
+        NativeSunECWrapper.ecGenKeyPair(curveNID, null, privKey, pubKey);
 
-        int altCurveNID = NativeECWrapper.getCurveNID("curvesm2");
+        int altCurveNID = NativeSunECWrapper.getCurveNID("curvesm2");
         byte[] peerAltPrivKey = new byte[32];
         byte[] peerAltPubKey = new byte[32 * 2 + 1];
-        NativeECWrapper.ecGenKeyPair(altCurveNID, null, peerAltPrivKey, peerAltPubKey);
+        NativeSunECWrapper.ecGenKeyPair(altCurveNID, null, peerAltPrivKey, peerAltPubKey);
 
         byte[] sharedKey = new byte[32];
         Assertions.assertThrows(KeyException.class,
-                () -> NativeECWrapper.ecdhDeriveKey(
+                () -> NativeSunECWrapper.ecdhDeriveKey(
                         curveNID, privKey, peerAltPubKey, sharedKey));
     }
 
     @Test
     public void testECDHKeyAgreementOnParams() throws Exception {
-        int secp256r1NID = NativeECWrapper.getCurveNID("secp256r1");
+        int secp256r1NID = NativeSunECWrapper.getCurveNID("secp256r1");
         byte[] secp256r1PrivKey = new byte[32];
         byte[] secp256r1PubKey = new byte[32 * 2 + 1];
-        NativeECWrapper.ecGenKeyPair(secp256r1NID, null, secp256r1PrivKey, secp256r1PubKey);
+        NativeSunECWrapper.ecGenKeyPair(secp256r1NID, null, secp256r1PrivKey, secp256r1PubKey);
         byte[] secp256r1SharedKey = new byte[32];
 
-        int secp384r1NID = NativeECWrapper.getCurveNID("secp384r1");
+        int secp384r1NID = NativeSunECWrapper.getCurveNID("secp384r1");
         byte[] secp384r1PrivKey = new byte[48];
         byte[] secp384r1PubKey = new byte[48 * 2 + 1];
-        NativeECWrapper.ecGenKeyPair(secp384r1NID, null, secp384r1PrivKey, secp384r1PubKey);
+        NativeSunECWrapper.ecGenKeyPair(secp384r1NID, null, secp384r1PrivKey, secp384r1PubKey);
         byte[] secp384r1SharedKey = new byte[48];
 
         Assertions.assertThrows(InvalidAlgorithmParameterException.class,
-                () -> NativeECWrapper.ecdhDeriveKey(
+                () -> NativeSunECWrapper.ecdhDeriveKey(
                         -1, secp256r1PrivKey, secp256r1PubKey, secp256r1SharedKey));
 
         Assertions.assertThrows(InvalidKeyException.class,
-                () -> NativeECWrapper.ecdhDeriveKey(
+                () -> NativeSunECWrapper.ecdhDeriveKey(
                         secp256r1NID, secp384r1PrivKey, secp256r1PubKey, secp256r1SharedKey));
 
         Assertions.assertThrows(InvalidKeyException.class,
-                () -> NativeECWrapper.ecdhDeriveKey(
+                () -> NativeSunECWrapper.ecdhDeriveKey(
                         secp256r1NID, secp256r1PrivKey, secp384r1PubKey, secp256r1SharedKey));
 
         Assertions.assertThrows(IllegalStateException.class,
-                () -> NativeECWrapper.ecdhDeriveKey(
+                () -> NativeSunECWrapper.ecdhDeriveKey(
                         secp256r1NID, secp256r1PrivKey, secp256r1PubKey, secp384r1SharedKey));
         Assertions.assertThrows(IllegalStateException.class,
-                () -> NativeECWrapper.ecdhDeriveKey(
+                () -> NativeSunECWrapper.ecdhDeriveKey(
                         secp384r1NID, secp384r1PrivKey, secp384r1PubKey, secp256r1SharedKey));
     }
 
@@ -501,23 +501,23 @@ public class NativeECTest {
 
     private void checkXDHKeyAgreement(String curve, int keyLength)
             throws Exception {
-        int curveNID = NativeECWrapper.getCurveNID(curve);
+        int curveNID = NativeSunECWrapper.getCurveNID(curve);
 
         byte[] privKey = new byte[keyLength];
         new SecureRandom().nextBytes(privKey);
         byte[] pubKey = new byte[keyLength];
-        NativeECWrapper.xdhComputePubKey(curveNID, privKey, pubKey);
+        NativeSunECWrapper.xdhComputePubKey(curveNID, privKey, pubKey);
 
         byte[] peerPrivKey = new byte[keyLength];
         new SecureRandom().nextBytes(peerPrivKey);
         byte[] peerPubKey = new byte[keyLength];
-        NativeECWrapper.xdhComputePubKey(curveNID, peerPrivKey, peerPubKey);
+        NativeSunECWrapper.xdhComputePubKey(curveNID, peerPrivKey, peerPubKey);
 
         byte[] sharedKey = new byte[keyLength];
-        NativeECWrapper.xdhDeriveKey(curveNID, privKey, peerPubKey, sharedKey);
+        NativeSunECWrapper.xdhDeriveKey(curveNID, privKey, peerPubKey, sharedKey);
 
         byte[] peerSharedKey = new byte[keyLength];
-        NativeECWrapper.xdhDeriveKey(curveNID, peerPrivKey, pubKey, peerSharedKey);
+        NativeSunECWrapper.xdhDeriveKey(curveNID, peerPrivKey, pubKey, peerSharedKey);
 
         // This shared key must not be zero-array.
         Assertions.assertFalse(Arrays.equals(new byte[sharedKey.length], sharedKey));
@@ -527,7 +527,7 @@ public class NativeECTest {
 
     @Test
     public void runXDHKeyAgreementSerially() throws Exception {
-        NativeECUtil.execTaskSerially(()-> {
+        NativeSunECUtil.execTaskSerially(()-> {
             testXDHKeyAgreement();
             return null;
         });
@@ -535,7 +535,7 @@ public class NativeECTest {
 
     @Test
     public void runXDHKeyAgreementParallelly() throws Exception {
-        NativeECUtil.execTaskParallelly(()-> {
+        NativeSunECUtil.execTaskParallelly(()-> {
             testXDHKeyAgreement();
             return null;
         });
@@ -543,79 +543,79 @@ public class NativeECTest {
 
     @Test
     public void testXDHKeyAgreementWithDiffKeys() throws Exception {
-        int curveNID = NativeECWrapper.getCurveNID("x25519");
+        int curveNID = NativeSunECWrapper.getCurveNID("x25519");
 
         byte[] privKey = new byte[32];
         new SecureRandom().nextBytes(privKey);
         byte[] pubKey = new byte[32];
-        NativeECWrapper.xdhComputePubKey(curveNID, privKey, pubKey);
+        NativeSunECWrapper.xdhComputePubKey(curveNID, privKey, pubKey);
 
         byte[] peerPrivKey = new byte[32];
         new SecureRandom().nextBytes(peerPrivKey);
         byte[] peerPubKey = new byte[32];
-        NativeECWrapper.xdhComputePubKey(curveNID, peerPrivKey, peerPubKey);
+        NativeSunECWrapper.xdhComputePubKey(curveNID, peerPrivKey, peerPubKey);
 
         byte[] sharedKey = new byte[32];
-        NativeECWrapper.xdhDeriveKey(curveNID, privKey, pubKey, sharedKey);
+        NativeSunECWrapper.xdhDeriveKey(curveNID, privKey, pubKey, sharedKey);
 
         byte[] peerSharedKey = new byte[32];
-        NativeECWrapper.xdhDeriveKey(curveNID, peerPrivKey, pubKey, peerSharedKey);
+        NativeSunECWrapper.xdhDeriveKey(curveNID, peerPrivKey, pubKey, peerSharedKey);
 
         Assertions.assertFalse(Arrays.equals(sharedKey, peerSharedKey));
     }
 
     @Test
     public void testXDHKeyAgreementWithDiffCurves() throws Exception {
-        int curveNID = NativeECWrapper.getCurveNID("x25519");
+        int curveNID = NativeSunECWrapper.getCurveNID("x25519");
         byte[] privKey = new byte[32];
         new SecureRandom().nextBytes(privKey);
         byte[] pubKey = new byte[32];
-        NativeECWrapper.xdhComputePubKey(curveNID, privKey, pubKey);
+        NativeSunECWrapper.xdhComputePubKey(curveNID, privKey, pubKey);
 
-        int altCurveNID = NativeECWrapper.getCurveNID("x448");
+        int altCurveNID = NativeSunECWrapper.getCurveNID("x448");
         byte[] peerAltPrivKey = new byte[56];
         new SecureRandom().nextBytes(peerAltPrivKey);
         byte[] peerAltPubKey = new byte[56];
-        NativeECWrapper.xdhComputePubKey(altCurveNID, peerAltPrivKey, peerAltPubKey);
+        NativeSunECWrapper.xdhComputePubKey(altCurveNID, peerAltPrivKey, peerAltPubKey);
 
         Assertions.assertThrows(KeyException.class,
-                () -> NativeECWrapper.xdhDeriveKey(
+                () -> NativeSunECWrapper.xdhDeriveKey(
                         curveNID, privKey, peerAltPubKey, new byte[32]));
     }
 
     @Test
     public void testXDHKeyAgreementOnParams() throws Exception {
-        int x25519NID = NativeECWrapper.getCurveNID("x25519");
+        int x25519NID = NativeSunECWrapper.getCurveNID("x25519");
         byte[] x25519PrivKey = new byte[32];
         new SecureRandom().nextBytes(x25519PrivKey);
         byte[] x25519PubKey = new byte[32];
-        NativeECWrapper.xdhComputePubKey(x25519NID, x25519PrivKey, x25519PubKey);
+        NativeSunECWrapper.xdhComputePubKey(x25519NID, x25519PrivKey, x25519PubKey);
         byte[] x25519SharedKey = new byte[32];
 
-        int x448NID = NativeECWrapper.getCurveNID("x448");
+        int x448NID = NativeSunECWrapper.getCurveNID("x448");
         byte[] x448PrivKey = new byte[56];
         new SecureRandom().nextBytes(x448PrivKey);
         byte[] x448PubKey = new byte[56];
-        NativeECWrapper.xdhComputePubKey(x448NID, x448PrivKey, x448PubKey);
+        NativeSunECWrapper.xdhComputePubKey(x448NID, x448PrivKey, x448PubKey);
         byte[] x448SharedKey = new byte[56];
 
         Assertions.assertThrows(InvalidAlgorithmParameterException.class,
-                () -> NativeECWrapper.xdhDeriveKey(
+                () -> NativeSunECWrapper.xdhDeriveKey(
                         -1, x25519PrivKey, x25519PubKey, x25519SharedKey));
 
         Assertions.assertThrows(InvalidKeyException.class,
-                () -> NativeECWrapper.xdhDeriveKey(
+                () -> NativeSunECWrapper.xdhDeriveKey(
                         x25519NID, x448PrivKey, x25519PubKey, x25519SharedKey));
 
         Assertions.assertThrows(InvalidKeyException.class,
-                () -> NativeECWrapper.xdhDeriveKey(
+                () -> NativeSunECWrapper.xdhDeriveKey(
                         x25519NID, x25519PrivKey, x448PubKey, x25519SharedKey));
 
         Assertions.assertThrows(IllegalStateException.class,
-                () -> NativeECWrapper.xdhDeriveKey(
+                () -> NativeSunECWrapper.xdhDeriveKey(
                         x25519NID, x25519PrivKey, x25519PubKey, x448SharedKey));
         Assertions.assertThrows(IllegalStateException.class,
-                () -> NativeECWrapper.xdhDeriveKey(
+                () -> NativeSunECWrapper.xdhDeriveKey(
                         x448NID, x448PrivKey, x448PubKey, x25519SharedKey));
     }
 
@@ -646,13 +646,13 @@ public class NativeECTest {
     private void checkXDHKeyAgreementKAT(
             String curve, String privKeyHex, String peerPubKeyHex,
             String expectedSharedKeyHex) throws Exception {
-        int curveNID = NativeECWrapper.getCurveNID(curve);
+        int curveNID = NativeSunECWrapper.getCurveNID(curve);
         byte[] privKey = HEX.parseHex(privKeyHex);
         byte[] peerPubKey = HEX.parseHex(peerPubKeyHex);
         byte[] expectedSharedKey = HEX.parseHex(expectedSharedKeyHex);
 
         byte[] sharedKey = new byte[privKey.length];
-        NativeECWrapper.xdhDeriveKey(curveNID, privKey, peerPubKey, sharedKey);
+        NativeSunECWrapper.xdhDeriveKey(curveNID, privKey, peerPubKey, sharedKey);
         Assertions.assertArrayEquals(expectedSharedKey, sharedKey,
                 HEX.formatHex(sharedKey));
     }

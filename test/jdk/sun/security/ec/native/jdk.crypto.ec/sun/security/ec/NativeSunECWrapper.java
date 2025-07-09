@@ -22,51 +22,51 @@ package sun.security.ec;
 import java.security.GeneralSecurityException;
 
 /**
- * A wrapper of NativeEC for exposing the internal APIs.
+ * A wrapper of NativeSunEC for exposing the internal APIs.
  */
-public class NativeECWrapper {
+public class NativeSunECWrapper {
 
     public static boolean isNativeCryptoEnabled() {
-        return NativeEC.isNativeCryptoEnabled();
+        return NativeSunEC.isNativeCryptoEnabled();
     }
 
     public static int getCurveNID(String curve) {
-        return NativeEC.getCurveNID(curve);
+        return NativeSunEC.getCurveNID(curve);
     }
 
     public static void ecGenKeyPair(int curveNID, byte[] seed,
             byte[] privKeyOut, byte[] pubKeyOut)
             throws GeneralSecurityException {
-        NativeEC.ecGenKeyPair(curveNID, seed, privKeyOut, pubKeyOut);
+        NativeSunEC.ecGenKeyPair(curveNID, seed, privKeyOut, pubKeyOut);
     }
 
     public static void xdhComputePubKey(int curveNID,
             byte[] privKeyIn, byte[] pubKeyOut)
             throws GeneralSecurityException {
-        NativeEC.xdhComputePubKey(curveNID, privKeyIn, pubKeyOut);
+        NativeSunEC.xdhComputePubKey(curveNID, privKeyIn, pubKeyOut);
     }
 
     public static void ecdsaSignDigest(int curveNID, byte[] seed,
             byte[] privKey, byte[] digest, byte[] signatureOut)
             throws GeneralSecurityException {
-        NativeEC.ecdsaSignDigest(curveNID, seed, privKey, digest, signatureOut);
+        NativeSunEC.ecdsaSignDigest(curveNID, seed, privKey, digest, signatureOut);
     }
 
     public static int ecdsaVerifySignedDigest(int curveNID,
             byte[] pubKey, byte[] digest, byte[] signature)
             throws GeneralSecurityException {
-        return NativeEC.ecdsaVerifySignedDigest(curveNID, pubKey, digest, signature);
+        return NativeSunEC.ecdsaVerifySignedDigest(curveNID, pubKey, digest, signature);
     }
 
     public static void ecdhDeriveKey(int curveNID,
             byte[] privKey, byte[] peerPubKey, byte[] sharedKeyOut)
             throws GeneralSecurityException {
-        NativeEC.ecdhDeriveKey(curveNID, privKey, peerPubKey, sharedKeyOut);
+        NativeSunEC.ecdhDeriveKey(curveNID, privKey, peerPubKey, sharedKeyOut);
     }
 
     public static void xdhDeriveKey(int curveNID,
             byte[] privKey, byte[] peerPubKey, byte[] sharedKeyOut)
             throws GeneralSecurityException {
-        NativeEC.xdhDeriveKey(curveNID, privKey, peerPubKey, sharedKeyOut);
+        NativeSunEC.xdhDeriveKey(curveNID, privKey, peerPubKey, sharedKeyOut);
     }
 }

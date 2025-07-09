@@ -26,15 +26,15 @@ import java.lang.annotation.*;
 
 @Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
-@ExtendWith(EnableOnNativeEC.NativeCryptoCondition.class)
-public @interface EnableOnNativeEC {
+@ExtendWith(EnableOnNativeSunEC.NativeCryptoCondition.class)
+public @interface EnableOnNativeSunEC {
 
     class NativeCryptoCondition implements ExecutionCondition {
 
         @Override
         public ConditionEvaluationResult evaluateExecutionCondition(
                 ExtensionContext context) {
-            if (NativeECUtil.nativeCryptoSupported()) {
+            if (NativeSunECUtil.nativeCryptoSupported()) {
                 return ConditionEvaluationResult.enabled(
                         "Native crypto is supported");
             } else {

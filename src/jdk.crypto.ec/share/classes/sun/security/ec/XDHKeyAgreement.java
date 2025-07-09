@@ -144,7 +144,7 @@ public class XDHKeyAgreement extends KeyAgreementSpi {
         }
 
         byte[] computedSecret = null;
-        if (NativeEC.useNativeXDH(xecParams.getName())) {
+        if (NativeSunEC.useNativeXDH(xecParams.getName())) {
             computedSecret = deriveKeyNative(xecParams,
                     privateKey, publicKey.getU());
         } else {
@@ -165,16 +165,16 @@ public class XDHKeyAgreement extends KeyAgreementSpi {
 
     private byte[] deriveKeyNative(XECParameters xecParams,
             byte[] privateKey, BigInteger u) throws InvalidKeyException {
-        int curveNID = NativeEC.getXECCurveNID(xecParams.getName());
+        int curveNID = NativeSunEC.getXECCurveNID(xecParams.getName());
 
         int keySize = xecParams.getBytes();
-        byte[] publicKeyU = NativeEC.padZerosForValue(
+        byte[] publicKeyU = NativeSunEC.padZerosForValue(
                 u.toByteArray(), keySize);
         // OpenSSL needs U in little-endian array
         ArrayUtil.reverse(publicKeyU);
         byte[] sharedKeyOut = new byte[keySize];
         try {
-            NativeEC.xdhDeriveKey(curveNID, privateKey, publicKeyU, sharedKeyOut);
+            NativeSunEC.xdhDeriveKey(curveNID, privateKey, publicKeyU, sharedKeyOut);
             return sharedKeyOut;
         } catch (InvalidKeyException | IllegalStateException e) {
             throw e;

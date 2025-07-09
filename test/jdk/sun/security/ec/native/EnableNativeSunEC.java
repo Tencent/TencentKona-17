@@ -24,34 +24,34 @@
  *          is available.
  * @modules jdk.crypto.ec/sun.security.ec
  * @library /test/lib /test/jdk/openssl
- * @build jdk.crypto.ec/sun.security.ec.NativeECWrapper
- * @run main/othervm EnableNativeEC
- * @run main/othervm/policy=native.policy EnableNativeEC
- * @run main/othervm -Djdk.sunec.enableNativeCrypto=true EnableNativeEC
- * @run main/othervm/policy=native.policy -Djdk.sunec.enableNativeCrypto=true EnableNativeEC
+ * @build jdk.crypto.ec/sun.security.ec.NativeSunECWrapper
+ * @run main/othervm EnableNativeSunEC
+ * @run main/othervm/policy=native.policy EnableNativeSunEC
+ * @run main/othervm -Djdk.sunec.enableNativeCrypto=true EnableNativeSunEC
+ * @run main/othervm/policy=native.policy -Djdk.sunec.enableNativeCrypto=true EnableNativeSunEC
  */
 
-import sun.security.ec.NativeECWrapper;
+import sun.security.ec.NativeSunECWrapper;
 
-public class EnableNativeEC {
+public class EnableNativeSunEC {
 
     public static void main(String[] args) {
-        boolean nativeCryptoSupported = NativeECUtil.nativeCryptoSupported();
+        boolean nativeCryptoSupported = NativeSunECUtil.nativeCryptoSupported();
 
-        boolean nativeECEnabled = Boolean.getBoolean("jdk.sunec.enableNativeCrypto");
-        System.out.println("nativeECEnabled: " + nativeECEnabled);
+        boolean nativeSunECEnabled = Boolean.getBoolean("jdk.sunec.enableNativeCrypto");
+        System.out.println("nativeSunECEnabled: " + nativeSunECEnabled);
 
-        if (nativeCryptoSupported && nativeECEnabled) {
-            if (NativeECWrapper.isNativeCryptoEnabled()) {
-                System.out.println("Native EC is enabled as expected");
+        if (nativeCryptoSupported && nativeSunECEnabled) {
+            if (NativeSunECWrapper.isNativeCryptoEnabled()) {
+                System.out.println("Native SunEC is enabled as expected");
             } else {
-                throw new RuntimeException("Native EC is disabled as unexpected");
+                throw new RuntimeException("Native SunEC is disabled as unexpected");
             }
         } else {
-            if (NativeECWrapper.isNativeCryptoEnabled()) {
-                throw new RuntimeException("Native EC is enabled as unexpected");
+            if (NativeSunECWrapper.isNativeCryptoEnabled()) {
+                throw new RuntimeException("Native SunEC is enabled as unexpected");
             } else {
-                System.out.println("Native EC is disabled as expected");
+                System.out.println("Native SunEC is disabled as expected");
             }
         }
     }

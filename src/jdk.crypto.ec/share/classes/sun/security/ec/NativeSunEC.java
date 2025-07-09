@@ -21,52 +21,27 @@
 package sun.security.ec;
 
 import sun.security.action.GetBooleanAction;
-import sun.security.action.GetPropertyAction;
 import sun.security.util.ECUtil;
+import sun.security.util.OpenSSLUtil;
 
 import java.security.*;
 import java.security.spec.ECParameterSpec;
 
 /**
- * The native implementation with OpenSSL for EC algorithms.
+ * The native implementation with OpenSSL for SunEC algorithms.
  */
-final class NativeEC {
+final class NativeSunEC {
 
-    private static boolean enableNativeCrypto;
+    private static final boolean IS_NATIVE_CRYPTO_ENABLED;
 
     static {
-        enableNativeCrypto = GetBooleanAction.privilegedGetProperty(
+        boolean enableNativeCrypto = GetBooleanAction.privilegedGetProperty(
                 "jdk.sunec.enableNativeCrypto");
-        if (enableNativeCrypto) {
-             // opensslcrypto must be loaded at first
-            enableNativeCrypto = loadOpenSSLCryptoLib() &&
-                                 loadSunECCryptoLib();
-        }
+        IS_NATIVE_CRYPTO_ENABLED = enableNativeCrypto
+                // OpenSSL crypto lib must be loaded at first
+                && OpenSSLUtil.isOpenSSLLoaded()
+                && loadSunECCryptoLib();
     }
-
-    // Load lib opensslcrypto
-    @SuppressWarnings("removal")
-    private static boolean loadOpenSSLCryptoLib() {
-        // The absolute path to OpenSSL libcrypto file
-        String opensslCryptoLibPath = GetPropertyAction.privilegedGetProperty(
-                  "jdk.openssl.cryptoLibPath");
-
-        boolean loaded = true;
-        try {
-            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                    if (opensslCryptoLibPath == null) {
-                         System.loadLibrary("opensslcrypto");
-                    } else {
-                         System.load(opensslCryptoLibPath);
-                    }
-                    return null;
-            });
-        } catch (UnsatisfiedLinkError e) {
-            System.err.println("Failed to load opensslcrypto: " + e);
-            loaded = false;
-        }
-        return loaded;
-     }
 
     // Load lib suneccrypto
     @SuppressWarnings("removal")
@@ -85,7 +60,7 @@ final class NativeEC {
     }
 
     static boolean isNativeCryptoEnabled() {
-        return enableNativeCrypto;
+        return IS_NATIVE_CRYPTO_ENABLED;
     }
 
     static int NID_SECP256R1 = 415;
@@ -155,7 +130,7 @@ final class NativeEC {
     }
 
     static boolean useNativeEC(ECParameterSpec params) {
-        return enableNativeCrypto && isSupportedECCurve(params);
+        return isNativeCryptoEnabled() && isSupportedECCurve(params);
     }
 
     private static boolean isSupportedECCurve(ECParameterSpec params) {
@@ -165,7 +140,7 @@ final class NativeEC {
     }
 
     static boolean useNativeECDSA(ECParameterSpec params) {
-        return enableNativeCrypto && isSupportedECDSACurve(params);
+        return isNativeCryptoEnabled() && isSupportedECDSACurve(params);
     }
 
     // Only support secp256r1 and secp384r1
@@ -176,7 +151,7 @@ final class NativeEC {
     }
 
     static boolean useNativeXDH(String curve) {
-        return enableNativeCrypto && getXECCurveNID(curve) != -1;
+        return isNativeCryptoEnabled() && getXECCurveNID(curve) != -1;
     }
 
     // If the length of value is less than expectedLength,

@@ -17,8 +17,8 @@
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef SUNEC_UTIL_H
-#define SUNEC_UTIL_H
+#ifndef SUNRSASIGN_UTIL_H
+#define SUNRSASIGN_UTIL_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,10 +31,10 @@ extern "C" {
 #define INVALID_KEY_EXCEPTION "java/security/InvalidKeyException"
 #define SIGNATURE_EXCEPTION "java/security/SignatureException"
 
-void sunec_throw(JNIEnv *env, const char *exceptionName, const char *message);
+void sunrsasign_throw(JNIEnv *env, const char *exceptionName, const char *message);
 
 #ifdef __cplusplus
 } /* extern "C" */
 #endif /* __cplusplus */
 
-#endif /* SUNEC_UTIL_H */
+#endif /* SUNRSASIGN_UTIL_H */

@@ -145,7 +145,7 @@ public final class ECKeyPairGenerator extends KeyPairGeneratorSpi {
         }
 
         try {
-            if (NativeEC.useNativeEC((ECParameterSpec)params)) {
+            if (NativeSunEC.useNativeEC((ECParameterSpec)params)) {
                 return generateKeyPairNative(random);
             } else {
                 Optional<KeyPair> kp = generateKeyPairImpl(random);
@@ -214,7 +214,7 @@ public final class ECKeyPairGenerator extends KeyPairGeneratorSpi {
             throws Exception {
         ECParameterSpec ecParams = (ECParameterSpec) params;
         byte[] encodedParams = ECUtil.encodeECParameterSpec(null, ecParams);
-        int curveNID = NativeEC.getECCurveNID(encodedParams);
+        int curveNID = NativeSunEC.getECCurveNID(encodedParams);
 
         // seed is twice the key size (in bytes) plus 1
         int keySizeInByte = (keySize + 7) >> 3;
@@ -223,7 +223,7 @@ public final class ECKeyPairGenerator extends KeyPairGeneratorSpi {
 
         byte[] privKey = new byte[keySizeInByte];
         byte[] pubKey = new byte[keySizeInByte * 2 + 1];
-        NativeEC.ecGenKeyPair(curveNID, seed, privKey, pubKey);
+        NativeSunEC.ecGenKeyPair(curveNID, seed, privKey, pubKey);
 
         // The 'params' object supplied above is equivalent to the native
         // one so there is no need to fetch it.

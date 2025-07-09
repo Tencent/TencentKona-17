@@ -38,7 +38,7 @@ import java.security.interfaces.XECPrivateKey;
 import java.security.spec.NamedParameterSpec;
 import java.util.Arrays;
 
-@EnableOnNativeEC
+@EnableOnNativeSunEC
 public class NativeXDHKeyPairGeneratorTest {
 
     @Test

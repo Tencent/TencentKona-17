@@ -20,42 +20,26 @@
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
 
-public class NativeECUtil {
+public class NativeSunRsaSignUtil {
 
     public static boolean nativeCryptoSupported() {
         String opensslCryptoPath = OpenSSLUtil.opensslCryptoPath();
-        boolean supported = nativeECSupported() && opensslCryptoPath != null;
+        boolean supported = nativeSunRsaSignSupported() && opensslCryptoPath != null;
         if (supported) {
             System.setProperty("jdk.openssl.cryptoLibPath", opensslCryptoPath);
         }
         return supported;
     }
 
-    private static boolean nativeECSupported() {
+    private static boolean nativeSunRsaSignSupported() {
         Path jdkLibDir = Paths.get(System.getProperty("test.jdk")).resolve("lib");
-        Path suneccryptoLinuxPath = jdkLibDir.resolve("libsuneccrypto.so");
-        return Files.exists(suneccryptoLinuxPath);
-    }
-
-    public static int privKeyLen(int orderLenInBit) {
-        return (orderLenInBit + 7) / 8;
-    }
-
-    public static int pubKeyLen(int privKeyLen) {
-        return privKeyLen * 2 + 1;
-    }
-
-    public static byte[] seed(int orderLenInBit) {
-        int seedLen = (orderLenInBit + 64 + 7) / 8;
-        byte[] seed = new byte[seedLen];
-        SecureRandom random = new SecureRandom();
-        random.nextBytes(seed);
-        return seed;
+        Path sunrsasigncryptoLinuxPath = jdkLibDir.resolve("libsunrsasigncrypto.so");
+        Path sunrsasigncryptoMacPath = jdkLibDir.resolve("libsunrsasigncrypto.dylib");
+        return Files.exists(sunrsasigncryptoLinuxPath) || Files.exists(sunrsasigncryptoMacPath);
     }
 
     public static void execTaskSerially(Callable<Void> task, int count)
@@ -67,7 +51,7 @@ public class NativeECUtil {
 
     public static void execTaskSerially(Callable<Void> task)
             throws Exception{
-        execTaskSerially(task, 100);
+        execTaskSerially(task, 10);
     }
 
     public static void execTaskParallelly(Callable<Void> task, int count)
@@ -94,6 +78,6 @@ public class NativeECUtil {
 
     public static void execTaskParallelly(Callable<Void> task)
             throws Exception {
-        execTaskParallelly(task, 100);
+        execTaskParallelly(task, 10);
     }
 }

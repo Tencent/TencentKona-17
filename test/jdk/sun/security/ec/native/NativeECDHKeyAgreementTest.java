@@ -37,7 +37,7 @@ import org.junit.jupiter.api.Test;
 
 import javax.crypto.KeyAgreement;
 
-@EnableOnNativeEC
+@EnableOnNativeSunEC
 public class NativeECDHKeyAgreementTest {
 
     @Test

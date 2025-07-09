@@ -36,7 +36,7 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.spec.ECGenParameterSpec;
 
-@EnableOnNativeEC
+@EnableOnNativeSunEC
 public class NativeXDHKeyAgreementTest {
 
     @Test

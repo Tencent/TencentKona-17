@@ -145,7 +145,7 @@ public final class ECDHKeyAgreement extends KeyAgreementSpi {
         secretLen = (keyLenBits + 7) >> 3;
 
         // The validation is done by JNI/OpenSSL
-        if (!NativeEC.useNativeEC(publicKey.getParams())) {
+        if (!NativeSunEC.useNativeEC(publicKey.getParams())) {
             // Validate public key
             validate(privateKeyOps, publicKey);
         }
@@ -228,7 +228,7 @@ public final class ECDHKeyAgreement extends KeyAgreementSpi {
 
         byte[] result;
         try {
-            if (NativeEC.useNativeEC(privateKey.getParams())) {
+            if (NativeSunEC.useNativeEC(privateKey.getParams())) {
                 result = deriveKeyNative(privateKey, publicKey);
             } else {
                 result = deriveKeyImpl(privateKey, privateKeyOps, publicKey);
@@ -301,7 +301,7 @@ public final class ECDHKeyAgreement extends KeyAgreementSpi {
     byte[] deriveKeyNative(ECPrivateKey privateKey, ECPublicKey publicKey) {
         ECParameterSpec params = privateKey.getParams();
         byte[] encodedParams = ECUtil.encodeECParameterSpec(null, params);
-        int curveNID = NativeEC.getECCurveNID(encodedParams);
+        int curveNID = NativeSunEC.getECCurveNID(encodedParams);
 
         byte[] s = privateKey.getS().toByteArray();
 
@@ -314,11 +314,11 @@ public final class ECDHKeyAgreement extends KeyAgreementSpi {
 
         int orderLength = params.getOrder().bitLength();
         int keySizeInBytes = (orderLength + 7) >> 3;
-        byte[] paddedS = NativeEC.padZerosForValue(s, keySizeInBytes);
-        byte[] paddedPubKey = NativeEC.padZerosForValuePair(pubKey, 1, keySizeInBytes);
+        byte[] paddedS = NativeSunEC.padZerosForValue(s, keySizeInBytes);
+        byte[] paddedPubKey = NativeSunEC.padZerosForValuePair(pubKey, 1, keySizeInBytes);
         byte[] sharedKeyOut = new byte[keySizeInBytes];
         try {
-            NativeEC.ecdhDeriveKey(curveNID, paddedS, paddedPubKey, sharedKeyOut);
+            NativeSunEC.ecdhDeriveKey(curveNID, paddedS, paddedPubKey, sharedKeyOut);
             return sharedKeyOut;
         } catch (Exception e) {
             throw new IllegalStateException("Could not derive key", e);

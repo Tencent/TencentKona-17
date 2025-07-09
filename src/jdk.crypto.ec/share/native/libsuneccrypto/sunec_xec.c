@@ -24,7 +24,7 @@
 
 #include "sunec_util.h"
 
-JNIEXPORT void JNICALL Java_sun_security_ec_NativeEC_xdhComputePubKey
+JNIEXPORT void JNICALL Java_sun_security_ec_NativeSunEC_xdhComputePubKey
   (JNIEnv *env, jclass clazz, jint curveNID,
    jbyteArray privKeyIn, jbyteArray pubKeyOut) {
     EVP_PKEY *pkey = NULL;
@@ -98,7 +98,7 @@ cleanup:
     }
 }
 
-JNIEXPORT void JNICALL Java_sun_security_ec_NativeEC_xdhDeriveKey
+JNIEXPORT void JNICALL Java_sun_security_ec_NativeSunEC_xdhDeriveKey
   (JNIEnv *env, jclass clazz, jint curveNID,
    jbyteArray privKey, jbyteArray peerPubKey, jbyteArray sharedKeyOut) {
     EVP_PKEY *priv_key = NULL;

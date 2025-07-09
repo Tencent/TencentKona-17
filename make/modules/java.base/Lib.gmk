@@ -206,3 +206,34 @@ ifeq ($(call isTargetOs, windows), true)
   ))
   TARGETS += $(COPY_TZMAPPINGS)
 endif
+
+################################################################################
+# Create the sunrsasigncrypto library
+
+ifeq ($(call isTargetOs, linux)+$(call isTargetCpu, x86_64 aarch64), true+true)
+
+  ifneq ($(KONA_OPENSSL_HOME),)
+    $(info OpenSSL is available, build sunrsasigncrypto: $(KONA_OPENSSL_HOME))
+
+    OPENSSL_INCLUDE_DIR := $(KONA_OPENSSL_HOME)/include
+    OPENSSL_LIB_DIR := $(KONA_OPENSSL_HOME)/lib
+
+    ifeq ($(call isTargetOs, linux)+$(call isTargetCpu, x86_64), true+true)
+      OPENSSL_LIB_DIR := $(KONA_OPENSSL_HOME)/lib64
+    endif
+
+    $(eval $(call SetupJdkLibrary, BUILD_LIBSUNRSASIGNCRYPTO, \
+        NAME := sunrsasigncrypto, \
+        OPTIMIZATION := HIGH, \
+        CFLAGS := $(CFLAGS_JDKLIB) -I$(OPENSSL_INCLUDE_DIR), \
+        LDFLAGS := $(LDFLAGS_JDKLIB) \
+            $(call SET_SHARED_LIBRARY_ORIGIN) -L$(OPENSSL_LIB_DIR), \
+        LIBS := -lcrypto, \
+    ))
+
+    TARGETS += $(BUILD_LIBSUNRSASIGNCRYPTO)
+  else
+    $(info OpenSSL is not available, skip sunrsasigncrypto build)
+  endif
+
+endif

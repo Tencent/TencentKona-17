@@ -17,24 +17,19 @@
  * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef SUNEC_UTIL_H
-#define SUNEC_UTIL_H
+package sun.security.rsa;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+/**
+ * A wrapper of NativeSunRsaSign for exposing the internal APIs.
+ */
+public class NativeSunRsaSignWrapper {
 
-#include "jni.h"
+    public static boolean isNativeCryptoEnabled() {
+        return NativeSunRsaSign.isNativeCryptoEnabled();
+    }
 
-#define ILLEGAL_STATE_EXCEPTION "java/lang/IllegalStateException"
-#define INVALID_ALGO_PARAM_EXCEPTION "java/security/InvalidAlgorithmParameterException"
-#define INVALID_KEY_EXCEPTION "java/security/InvalidKeyException"
-#define SIGNATURE_EXCEPTION "java/security/SignatureException"
-
-void sunec_throw(JNIEnv *env, const char *exceptionName, const char *message);
-
-#ifdef __cplusplus
-} /* extern "C" */
-#endif /* __cplusplus */
-
-#endif /* SUNEC_UTIL_H */
+    public static void rsaModPow(byte[] base, byte[] exponent, byte[] modulus,
+            byte[] out) {
+        NativeSunRsaSign.rsaModPow(base, exponent, modulus, out);
+    }
+}
