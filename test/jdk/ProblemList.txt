@@ -665,7 +665,6 @@ sun/security/provider/PolicyParser/PrincipalExpansionError.java 8039280 generic-
 sun/security/pkcs11/sslecc/ClientJSSEServerJSSE.java            8316183 linux-ppc64le
 
 security/infra/java/security/cert/CertPathValidator/certification/CAInterop.java#teliasonerarootcav1  8333640 generic-all
-sun/security/lib/cacerts/VerifyCACerts.java                     8303770 generic-all
 
 ############################################################################
 
