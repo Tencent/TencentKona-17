@@ -58,8 +58,8 @@ public class IRNode {
     public static final String ALLOC_ARRAY = "(.*precise klass \\[L.*\\R((.*(?i:mov|mv|xor|nop|spill).*|\\s*|.*LGHI.*)\\R)*.*(?i:call,static).*wrapper for: _new_array_Java" + END;
     public static final String ALLOC_ARRAY_OF = COMPOSITE_PREFIX + "(.*precise klass \\[L.*" + IS_REPLACED + ";:.*\\R((.*(?i:mov|mv|xorl|nop|spill).*|\\s*|.*LGHI.*)\\R)*.*(?i:call,static).*wrapper for: _new_array_Java" + END;
 
-    public static final String CHECKCAST_ARRAY = "(((?i:cmp|CLFI|CLR).*precise klass \\[.*;:|.*(?i:mov|mv|or).*precise klass \\[.*;:.*\\R.*(cmp|CMP|CLR))" + END;
-    public static final String CHECKCAST_ARRAY_OF = COMPOSITE_PREFIX + "(((?i:cmp|CLFI|CLR).*precise klass \\[.*" + IS_REPLACED + ";:|.*(?i:mov|mv|or).*precise klass \\[.*" + IS_REPLACED + ";:.*\\R.*(cmp|CMP|CLR))" + END;
+    public static final String CHECKCAST_ARRAY = "(((?i:cmp|CLFI|CLR).*precise klass \\[.*;:|.*(?i:mov|mv|or|li).*precise klass \\[.*;:.*\\R.*(cmp|CMP|CLR))" + END;
+    public static final String CHECKCAST_ARRAY_OF = COMPOSITE_PREFIX + "(((?i:cmp|CLFI|CLR).*precise klass \\[.*" + IS_REPLACED + ";:|.*(?i:mov|mv|or|li).*precise klass \\[.*" + IS_REPLACED + ";:.*\\R.*(cmp|CMP|CLR))" + END;
     // Does not work on s390 (a rule containing this regex will be skipped on s390).
     public static final String CHECKCAST_ARRAYCOPY = "(.*((?i:call_leaf_nofp,runtime)|CALL,\\s?runtime leaf nofp|BCTRL.*.leaf call).*checkcast_arraycopy.*" + END;
 

@@ -94,7 +94,7 @@ private:
 
 public:
   LIR_OpZLoadBarrierTest(LIR_Opr opr) :
-#ifdef RISCV
+#if defined(RISCV) || defined(LOONGARCH)
       LIR_Op(lir_zloadbarrier_test, LIR_OprFact::illegalOpr, NULL),
 #else
       LIR_Op(),

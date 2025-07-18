@@ -539,11 +539,20 @@ AC_DEFUN([PLATFORM_SETUP_LEGACY_VARS_HELPER],
     HOTSPOT_$1_CPU=ppc_64
   elif test "x$OPENJDK_$1_CPU" = xppc64le; then
     HOTSPOT_$1_CPU=ppc_64
+  elif test "x$OPENJDK_$1_CPU" = xloongarch; then
+    HOTSPOT_$1_CPU=loongarch_64
+  elif test "x$OPENJDK_$1_CPU" = xloongarch64; then
+    HOTSPOT_$1_CPU=loongarch_64
   fi
   AC_SUBST(HOTSPOT_$1_CPU)
 
   # This is identical with OPENJDK_*, but define anyway for consistency.
   HOTSPOT_$1_CPU_ARCH=${OPENJDK_$1_CPU_ARCH}
+  # Override hotspot cpu definitions for LoongArch platforms
+  if test "x$OPENJDK_$1_CPU" = xloongarch64; then
+    HOTSPOT_TARGET_CPU_ARCH=loongarch
+  fi
+
   AC_SUBST(HOTSPOT_$1_CPU_ARCH)
 
   # Setup HOTSPOT_$1_CPU_DEFINE
@@ -563,6 +572,8 @@ AC_DEFUN([PLATFORM_SETUP_LEGACY_VARS_HELPER],
     HOTSPOT_$1_CPU_DEFINE=PPC64
   elif test "x$OPENJDK_$1_CPU" = xriscv64; then
     HOTSPOT_$1_CPU_DEFINE=RISCV64
+  elif test "x$OPENJDK_$1_CPU" = xloongarch64; then
+    HOTSPOT_$1_CPU_DEFINE=LOONGARCH64
 
   # The cpu defines below are for zero, we don't support them directly.
   elif test "x$OPENJDK_$1_CPU" = xsparc; then

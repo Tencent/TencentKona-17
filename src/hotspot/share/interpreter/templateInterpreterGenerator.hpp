@@ -110,9 +110,9 @@ class TemplateInterpreterGenerator: public AbstractInterpreterGenerator {
 
   void generate_fixed_frame(bool native_call);
 
-#ifdef AARCH64
+#if defined(AARCH64) || defined(LOONGARCH64)
   void generate_transcendental_entry(AbstractInterpreter::MethodKind kind, int fpargs);
-#endif // AARCH64
+#endif // AARCH64 || LOONGARCH64
 
 #ifdef PPC
   void lock_method(Register Rflags, Register Rscratch1, Register Rscratch2, bool flags_preloaded=false);
