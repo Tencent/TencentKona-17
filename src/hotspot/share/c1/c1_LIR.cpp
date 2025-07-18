@@ -190,6 +190,8 @@ void LIR_Op2::verify() const {
     case lir_cmove:
 #ifdef RISCV
       assert(false, "lir_cmove is LIR_Op4 on RISCV");
+#elif defined(LOONGARCH)
+      assert(false, "lir_cmove is LIR_Op4 on LoongArch");
 #endif
     case lir_xchg:
       break;
@@ -241,7 +243,7 @@ void LIR_Op2::verify() const {
 
 
 LIR_OpBranch::LIR_OpBranch(LIR_Condition cond, BlockBegin* block)
-#ifdef RISCV
+#if defined(RISCV) || defined(LOONGARCH)
   : LIR_Op2(lir_branch, cond, LIR_OprFact::illegalOpr, LIR_OprFact::illegalOpr, (CodeEmitInfo*)NULL)
 #else
   : LIR_Op(lir_branch, LIR_OprFact::illegalOpr, (CodeEmitInfo*)NULL)
@@ -254,7 +256,7 @@ LIR_OpBranch::LIR_OpBranch(LIR_Condition cond, BlockBegin* block)
 }
 
 LIR_OpBranch::LIR_OpBranch(LIR_Condition cond, CodeStub* stub) :
-#ifdef RISCV
+#if defined(RISCV) || defined(LOONGARCH)
   LIR_Op2(lir_branch, cond, LIR_OprFact::illegalOpr, LIR_OprFact::illegalOpr, (CodeEmitInfo*)NULL)
 #else
   LIR_Op(lir_branch, LIR_OprFact::illegalOpr, (CodeEmitInfo*)NULL)
@@ -267,7 +269,7 @@ LIR_OpBranch::LIR_OpBranch(LIR_Condition cond, CodeStub* stub) :
 }
 
 LIR_OpBranch::LIR_OpBranch(LIR_Condition cond, BlockBegin* block, BlockBegin* ublock)
-#ifdef RISCV
+#if defined(RISCV) || defined(LOONGARCH)
   : LIR_Op2(lir_cond_float_branch, cond, LIR_OprFact::illegalOpr, LIR_OprFact::illegalOpr, (CodeEmitInfo*)NULL)
 #else
   : LIR_Op(lir_cond_float_branch, LIR_OprFact::illegalOpr, (CodeEmitInfo*)NULL)
@@ -512,6 +514,9 @@ void LIR_OpVisitState::visit(LIR_Op* op) {
       assert(opConvert->_info == NULL, "must be");
       if (opConvert->_opr->is_valid())       do_input(opConvert->_opr);
       if (opConvert->_result->is_valid())    do_output(opConvert->_result);
+#ifdef LOONGARCH64
+      if (opConvert->_tmp->is_valid())       do_temp(opConvert->_tmp);
+#endif
 #ifdef PPC32
       if (opConvert->_tmp1->is_valid())      do_temp(opConvert->_tmp1);
       if (opConvert->_tmp2->is_valid())      do_temp(opConvert->_tmp2);
@@ -528,7 +533,7 @@ void LIR_OpVisitState::visit(LIR_Op* op) {
       assert(op->as_OpBranch() != NULL, "must be");
       LIR_OpBranch* opBranch = (LIR_OpBranch*)op;
 
-#ifdef RISCV
+#if defined(RISCV) || defined(LOONGARCH)
       assert(opBranch->_tmp1->is_illegal() && opBranch->_tmp2->is_illegal() &&
              opBranch->_tmp3->is_illegal() && opBranch->_tmp4->is_illegal() &&
              opBranch->_tmp5->is_illegal(), "not used");
@@ -625,7 +630,7 @@ void LIR_OpVisitState::visit(LIR_Op* op) {
     // to the result operand, otherwise the backend fails
     case lir_cmove:
     {
-#ifdef RISCV
+#if defined(RISCV) || defined(LOONGARCH)
       assert(op->as_Op4() != NULL, "must be");
       LIR_Op4* op4 = (LIR_Op4*)op;
 
@@ -1095,7 +1100,7 @@ void LIR_Op3::emit_code(LIR_Assembler* masm) {
   masm->emit_op3(this);
 }
 
-#ifdef RISCV
+#if defined(RISCV) || defined(LOONGARCH)
 void LIR_Op4::emit_code(LIR_Assembler* masm) {
   masm->emit_op4(this);
 }
@@ -1141,7 +1146,7 @@ LIR_List::LIR_List(Compilation* compilation, BlockBegin* block)
   , _file(NULL)
   , _line(0)
 #endif
-#ifdef RISCV
+#if defined(RISCV) || defined(LOONGARCH)
   , _cmp_opr1(LIR_OprFact::illegalOpr)
   , _cmp_opr2(LIR_OprFact::illegalOpr)
 #endif
@@ -1162,7 +1167,7 @@ void LIR_List::set_file_and_line(const char * file, int line) {
 }
 #endif
 
-#ifdef RISCV
+#if defined(RISCV) || defined(LOONGARCH)
 void LIR_List::set_cmp_oprs(LIR_Op* op) {
   switch (op->code()) {
     case lir_cmp:
@@ -1185,7 +1190,7 @@ void LIR_List::set_cmp_oprs(LIR_Op* op) {
       break;
 #if INCLUDE_ZGC
     case lir_zloadbarrier_test:
-      _cmp_opr1 = FrameMap::as_opr(t1);
+      _cmp_opr1 = FrameMap::as_opr(RISCV_ONLY(t1) LOONGARCH64_ONLY(SCR1));
       _cmp_opr2 = LIR_OprFact::intConst(0);
       break;
 #endif
@@ -1924,7 +1929,7 @@ void LIR_Op1::print_patch_code(outputStream* out, LIR_PatchCode code) {
 // LIR_OpBranch
 void LIR_OpBranch::print_instr(outputStream* out) const {
   print_condition(out, cond());             out->print(" ");
-#ifdef RISCV
+#if defined(RISCV) || defined(LOONGARCH)
   in_opr1()->print(out); out->print(" ");
   in_opr2()->print(out); out->print(" ");
 #endif
@@ -1963,6 +1968,11 @@ void LIR_OpConvert::print_instr(outputStream* out) const {
   print_bytecode(out, bytecode());
   in_opr()->print(out);                  out->print(" ");
   result_opr()->print(out);              out->print(" ");
+#ifdef LOONGARCH64
+  if(tmp()->is_valid()) {
+    tmp()->print(out);                   out->print(" ");
+  }
+#endif
 #ifdef PPC32
   if(tmp1()->is_valid()) {
     tmp1()->print(out); out->print(" ");
@@ -2014,7 +2024,7 @@ void LIR_OpRoundFP::print_instr(outputStream* out) const {
 
 // LIR_Op2
 void LIR_Op2::print_instr(outputStream* out) const {
-#ifdef RISCV
+#if defined(RISCV) || defined(LOONGARCH)
   if (code() == lir_cmp || code() == lir_branch || code() == lir_cond_float_branch) {
 #else
   if (code() == lir_cmove || code() == lir_cmp) {
@@ -2069,7 +2079,7 @@ void LIR_Op3::print_instr(outputStream* out) const {
   result_opr()->print(out);
 }
 
-#ifdef RISCV
+#if defined(RISCV) || defined(LOONGARCH)
 // LIR_Op4
 void LIR_Op4::print_instr(outputStream* out) const {
   print_condition(out, condition()); out->print(" ");
