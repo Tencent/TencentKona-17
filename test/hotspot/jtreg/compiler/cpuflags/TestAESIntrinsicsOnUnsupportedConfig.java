@@ -28,7 +28,7 @@
  *          java.management
  *
  * @build jdk.test.whitebox.WhiteBox
- * @requires !(vm.cpu.features ~= ".*aes.*")
+ * @requires !(vm.cpu.features ~= ".*aes.*" | os.arch == "loongarch64")
  * @requires vm.compiler1.enabled | !vm.graal.enabled
  * @run driver jdk.test.lib.helpers.ClassFileInstaller jdk.test.whitebox.WhiteBox
  * @run main/othervm -Xbootclasspath/a:. -XX:+UnlockDiagnosticVMOptions

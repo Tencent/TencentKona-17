@@ -215,7 +215,7 @@ public class TestIRMatching {
         runCheck(BadFailOnConstraint.create(Membar.class, "membar()", 1, "MemBar"));
 
         String cmp;
-        if (Platform.isPPC() || Platform.isX86()) {
+        if (Platform.isPPC() || Platform.isX86() || Platform.isLoongArch64()) {
             cmp = "CMP";
         } else if (Platform.isS390x()){
             cmp = "CLFI";
