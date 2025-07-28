@@ -139,8 +139,23 @@ public final class RSACore {
     private static byte[] crypt(byte[] msg, BigInteger n, BigInteger exp)
             throws BadPaddingException {
         BigInteger m = parseMsg(msg, n);
-        BigInteger c = m.modPow(exp, n);
+        BigInteger c = modPow(m, exp, n);
         return toByteArray(c, getByteLength(n));
+    }
+
+    private static BigInteger modPow(BigInteger base, BigInteger exponent,
+            BigInteger modulus) {
+        return NativeSunRsaSign.isNativeCryptoEnabled()
+                ? modPowNative(base, exponent, modulus)
+                : base.modPow(exponent, modulus);
+    }
+
+    private static BigInteger modPowNative(BigInteger base, BigInteger exponent,
+            BigInteger modulus) {
+        byte[] result = new byte[getByteLength(modulus)];
+        NativeSunRsaSign.rsaModPow(base.toByteArray(), exponent.toByteArray(),
+                modulus.toByteArray(), result);
+        return new BigInteger(1, result);
     }
 
     /**
@@ -155,10 +170,10 @@ public final class RSACore {
         if (ENABLE_BLINDING) {
             brp = getBlindingRandomPair(null, exp, n);
             c = c.multiply(brp.u).mod(n);
-            m = c.modPow(exp, n);
+            m = modPow(c, exp, n);
             m = m.multiply(brp.v).mod(n);
         } else {
-            m = c.modPow(exp, n);
+            m = modPow(c, exp, n);
         }
 
         return toByteArray(m, getByteLength(n));
@@ -188,9 +203,9 @@ public final class RSACore {
         }
 
         // m1 = c ^ dP mod p
-        BigInteger m1 = c.modPow(dP, p);
+        BigInteger m1 = modPow(c, dP, p);
         // m2 = c ^ dQ mod q
-        BigInteger m2 = c.modPow(dQ, q);
+        BigInteger m2 = modPow(c, dQ, q);
 
         // h = (m1 - m2) * qInv mod p
         BigInteger mtmp = m1.subtract(m2);
@@ -205,7 +220,7 @@ public final class RSACore {
         if (ENABLE_BLINDING) {
             m = m.multiply(brp.v).mod(n);
         }
-        if (verify && !c0.equals(m.modPow(e, n))) {
+        if (verify && !c0.equals(modPow(m, e, n))) {
             throw new BadPaddingException("RSA private key operation failed");
         }
 
@@ -393,11 +408,11 @@ public final class RSACore {
             }
 
             if (e != null) {
-                u = u.modPow(e, n);   // e: the public exponent
+                u = modPow(u, e, n);  // e: the public exponent
                                       // u: random ^ e
                                       // v: random ^ (-1)
             } else {
-                v = v.modPow(d, n);   // d: the private exponent
+                v = modPow(v, d, n);  // d: the private exponent
                                       // u: random
                                       // v: random ^ (-d)
             }
@@ -417,8 +432,8 @@ public final class RSACore {
                     u = BigInteger.ZERO;
                     v = BigInteger.ZERO;
                 } else {
-                    u = u.modPow(BIG_TWO, n);
-                    v = v.modPow(BIG_TWO, n);
+                    u = modPow(u, BIG_TWO, n);
+                    v = modPow(v, BIG_TWO, n);
                 }
 
                 return brp;

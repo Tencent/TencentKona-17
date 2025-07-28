@@ -465,6 +465,35 @@ abstract class ECDSASignature extends SignatureSpi {
             + numAttempts + " attempts");
     }
 
+    private byte[] signDigestNative(ECPrivateKey privateKey, int seedBits,
+            byte[] digest, SecureRandom random) throws SignatureException {
+        byte[] s = privateKey.getS().toByteArray();
+        ECParameterSpec params = privateKey.getParams();
+
+        // DER OID
+        byte[] encodedParams = ECUtil.encodeECParameterSpec(null, params);
+        int curveNID = NativeSunEC.getECCurveNID(encodedParams);
+
+        int orderLength = params.getOrder().bitLength();
+        int keySizeInBytes = (orderLength + 7) >> 3;
+
+        byte[] seedBytes = new byte[(seedBits + 7) / 8];
+        random.nextBytes(seedBytes);
+
+        byte[] alignedDigest = new byte[keySizeInBytes];
+        int length = Math.min(digest.length, alignedDigest.length);
+        System.arraycopy(digest, 0, alignedDigest, alignedDigest.length - length, length);
+
+        byte[] paddedS = NativeSunEC.padZerosForValue(s, keySizeInBytes);
+        byte[] signatureOut = new byte[keySizeInBytes * 2];
+        try {
+            NativeSunEC.ecdsaSignDigest(curveNID, seedBytes, paddedS,
+                    alignedDigest, signatureOut);
+            return signatureOut;
+        } catch (GeneralSecurityException e) {
+            throw new SignatureException("Could not sign data", e);
+        }
+    }
 
     // sign the data and return the signature. See JCA doc
     @Override
@@ -484,8 +513,14 @@ abstract class ECDSASignature extends SignatureSpi {
         if (opsOpt.isEmpty()) {
             throw new SignatureException("Curve not supported: " + params);
         }
-        byte[] sig = signDigestImpl(opsOpt.get(), seedBits, digest, privateKey,
-            random);
+
+        byte[] sig;
+        if (NativeSunEC.useNativeECDSA(params)) {
+            sig = signDigestNative(privateKey, seedBits, digest, random);
+        } else {
+            sig = signDigestImpl(opsOpt.get(), seedBits, digest, privateKey,
+                    random);
+        }
 
         if (p1363Format) {
             return sig;
@@ -524,7 +559,36 @@ abstract class ECDSASignature extends SignatureSpi {
         } else {
             sig = ECUtil.decodeSignature(signature);
         }
+
+        if (NativeSunEC.useNativeECDSA(params)) {
+            return verifySignedDigestNative(getDigestValue(), sig, w, params);
+        }
+
         return ops.verifySignedDigest(getDigestValue(), sig, w);
+    }
+
+    private boolean verifySignedDigestNative(byte[] digest, byte[] sig,
+            ECPoint w, ECParameterSpec params) throws SignatureException {
+        byte[] encodedParams = ECUtil.encodeECParameterSpec(null, params);
+        int curveNID = NativeSunEC.getECCurveNID(encodedParams);
+
+        int orderLength = params.getOrder().bitLength();
+        int keySizeInBytes = (orderLength + 7) >> 3;
+
+        byte[] alignedDigest = new byte[keySizeInBytes];
+        int length = Math.min(digest.length, alignedDigest.length);
+        System.arraycopy(digest, 0, alignedDigest, alignedDigest.length - length, length);
+
+        byte[] paddedSig = NativeSunEC.padZerosForValuePair(sig, keySizeInBytes);
+
+        byte[] pubKey = ECUtil.encodePoint(w, params.getCurve());
+        byte[] paddedPubKey = NativeSunEC.padZerosForValuePair(pubKey, 1, keySizeInBytes);
+        try {
+            return NativeSunEC.ecdsaVerifySignedDigest(
+                    curveNID, paddedPubKey, alignedDigest, paddedSig) == 1;
+        } catch (GeneralSecurityException e) {
+            throw new SignatureException(e);
+        }
     }
 
     // set parameter, not supported. See JCA doc
