@@ -410,6 +410,8 @@ JMH_VERSION := @JMH_VERSION@
 
 GTEST_FRAMEWORK_SRC := @GTEST_FRAMEWORK_SRC@
 
+KONA_OPENSSL_HOME = @KONA_OPENSSL_HOME@
+
 # Source file for cacerts
 CACERTS_FILE=@CACERTS_FILE@
 # Source folder for user provided cacerts PEM files 
