@@ -71,7 +71,7 @@ public class TestAESIntrinsicsOnUnsupportedConfig extends AESIntrinsicsBase {
      * @throws Throwable
      */
     private void testUseAESIntrinsics() throws Throwable {
-        OutputAnalyzer outputAnalyzer = ProcessTools.executeTestJvm(
+        OutputAnalyzer outputAnalyzer = ProcessTools.executeTestJava(
                 AESIntrinsicsBase.prepareArguments(prepareBooleanFlag(
                         AESIntrinsicsBase.USE_AES_INTRINSICS, true)));
         final String errorMessage = "Case testUseAESIntrinsics failed";
@@ -95,7 +95,7 @@ public class TestAESIntrinsicsOnUnsupportedConfig extends AESIntrinsicsBase {
      * @throws Throwable
      */
     private void testUseAES() throws Throwable {
-        OutputAnalyzer outputAnalyzer = ProcessTools.executeTestJvm(
+        OutputAnalyzer outputAnalyzer = ProcessTools.executeTestJava(
                 AESIntrinsicsBase.prepareArguments(prepareBooleanFlag
                         (AESIntrinsicsBase.USE_AES, true)));
         final String errorMessage = "Case testUseAES failed";

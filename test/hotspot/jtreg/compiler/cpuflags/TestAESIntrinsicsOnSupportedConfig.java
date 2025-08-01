@@ -78,7 +78,7 @@ public class TestAESIntrinsicsOnSupportedConfig extends AESIntrinsicsBase {
      * @throws Throwable
      */
     private void testUseAES() throws Throwable {
-        OutputAnalyzer outputAnalyzer = ProcessTools.executeTestJvm(
+        OutputAnalyzer outputAnalyzer = ProcessTools.executeTestJava(
                 prepareArguments(prepareBooleanFlag(AESIntrinsicsBase
                         .USE_AES, true)));
         final String errorMessage = "Case testUseAES failed";
@@ -109,7 +109,7 @@ public class TestAESIntrinsicsOnSupportedConfig extends AESIntrinsicsBase {
      */
     private void testUseAESUseSSE2() throws Throwable {
         if (Platform.isX86() || Platform.isX64()) {
-            OutputAnalyzer outputAnalyzer = ProcessTools.executeTestJvm(
+            OutputAnalyzer outputAnalyzer = ProcessTools.executeTestJava(
                     prepareArguments(prepareBooleanFlag(AESIntrinsicsBase
                                     .USE_AES_INTRINSICS, true),
                             prepareNumericFlag(AESIntrinsicsBase.USE_SSE, 2)));
@@ -138,7 +138,7 @@ public class TestAESIntrinsicsOnSupportedConfig extends AESIntrinsicsBase {
      */
     private void testNoUseAESUseSSE2() throws Throwable {
         if (Platform.isX86() || Platform.isX64()) {
-            OutputAnalyzer outputAnalyzer = ProcessTools.executeTestJvm(
+            OutputAnalyzer outputAnalyzer = ProcessTools.executeTestJava(
                     prepareArguments(prepareBooleanFlag(AESIntrinsicsBase
                                     .USE_AES, false),
                             prepareNumericFlag(AESIntrinsicsBase.USE_SSE, 2)));
@@ -164,7 +164,7 @@ public class TestAESIntrinsicsOnSupportedConfig extends AESIntrinsicsBase {
      * @throws Throwable
      */
     private void testNoUseAES() throws Throwable {
-        OutputAnalyzer outputAnalyzer = ProcessTools.executeTestJvm(
+        OutputAnalyzer outputAnalyzer = ProcessTools.executeTestJava(
                 prepareArguments(prepareBooleanFlag(AESIntrinsicsBase
                         .USE_AES, false)));
         final String errorMessage = "Case testNoUseAES failed";
@@ -186,7 +186,7 @@ public class TestAESIntrinsicsOnSupportedConfig extends AESIntrinsicsBase {
      * @throws Throwable
      */
     private void testNoUseAESIntrinsic() throws Throwable {
-        OutputAnalyzer outputAnalyzer = ProcessTools.executeTestJvm(
+        OutputAnalyzer outputAnalyzer = ProcessTools.executeTestJava(
                 prepareArguments(prepareBooleanFlag(AESIntrinsicsBase
                         .USE_AES_INTRINSICS, false)));
         final String errorMessage = "Case testNoUseAESIntrinsic failed";
