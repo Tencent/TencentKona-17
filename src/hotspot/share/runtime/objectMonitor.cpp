@@ -362,6 +362,9 @@ bool ObjectMonitor::enter(JavaThread* current) {
   }
 
   assert(owner_raw() != current, "invariant");
+  // Thread _succ != current assertion load reording before Thread if (_succ == current) _succ = nullptr.
+  // But expect order is firstly if (_succ == current) _succ = nullptr then _succ != current assertion.
+  DEBUG_ONLY(LOONGARCH64_ONLY(__asm__ __volatile__ ("dbar 0x700\n");))
   assert(_succ != current, "invariant");
   assert(!SafepointSynchronize::is_at_safepoint(), "invariant");
   assert(current->thread_state() != _thread_blocked, "invariant");
@@ -723,6 +726,7 @@ void ObjectMonitor::EnterI(JavaThread* current) {
   }
 
   // The Spin failed -- Enqueue and park the thread ...
+  DEBUG_ONLY(LOONGARCH64_ONLY(__asm__ __volatile__ ("dbar 0x700\n");))
   assert(_succ != current, "invariant");
   assert(owner_raw() != current, "invariant");
   assert(_Responsible != current, "invariant");

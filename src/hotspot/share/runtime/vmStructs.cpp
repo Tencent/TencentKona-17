@@ -1598,6 +1598,7 @@ typedef HashtableEntry<InstanceKlass*, mtClass>  KlassHashtableEntry;
   declare_c2_type(StoreFenceNode, MemBarNode)                             \
   declare_c2_type(MemBarVolatileNode, MemBarNode)                         \
   declare_c2_type(MemBarCPUOrderNode, MemBarNode)                         \
+  LOONGARCH64_ONLY(declare_c2_type(SameAddrLoadFenceNode, MemBarNode))    \
   declare_c2_type(OnSpinWaitNode, MemBarNode)                             \
   declare_c2_type(BlackholeNode, MultiNode)                               \
   declare_c2_type(InitializeNode, MemBarNode)                             \

@@ -34,12 +34,14 @@ import sun.jvm.hotspot.debugger.x86.*;
 import sun.jvm.hotspot.debugger.amd64.*;
 import sun.jvm.hotspot.debugger.aarch64.*;
 import sun.jvm.hotspot.debugger.riscv64.*;
+import sun.jvm.hotspot.debugger.loongarch64.*;
 import sun.jvm.hotspot.debugger.ppc64.*;
 import sun.jvm.hotspot.debugger.linux.x86.*;
 import sun.jvm.hotspot.debugger.linux.amd64.*;
 import sun.jvm.hotspot.debugger.linux.ppc64.*;
 import sun.jvm.hotspot.debugger.linux.aarch64.*;
 import sun.jvm.hotspot.debugger.linux.riscv64.*;
+import sun.jvm.hotspot.debugger.linux.loongarch64.*;
 import sun.jvm.hotspot.utilities.*;
 
 class LinuxCDebugger implements CDebugger {
@@ -93,7 +95,14 @@ class LinuxCDebugger implements CDebugger {
        Address pc  = context.getRegisterAsAddress(AMD64ThreadContext.RIP);
        if (pc == null) return null;
        return LinuxAMD64CFrame.getTopFrame(dbg, pc, context);
-    }  else if (cpu.equals("ppc64")) {
+    } else if (cpu.equals("loongarch64")) {
+       LOONGARCH64ThreadContext context = (LOONGARCH64ThreadContext) thread.getContext();
+       Address fp = context.getRegisterAsAddress(LOONGARCH64ThreadContext.FP);
+       if (fp == null) return null;
+       Address pc  = context.getRegisterAsAddress(LOONGARCH64ThreadContext.PC);
+       if (pc == null) return null;
+       return new LinuxLOONGARCH64CFrame(dbg, fp, pc);
+    } else if (cpu.equals("ppc64")) {
         PPC64ThreadContext context = (PPC64ThreadContext) thread.getContext();
         Address sp = context.getRegisterAsAddress(PPC64ThreadContext.SP);
         if (sp == null) return null;
