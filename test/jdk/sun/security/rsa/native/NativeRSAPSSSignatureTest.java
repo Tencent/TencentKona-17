@@ -20,7 +20,6 @@
 /*
  * @test
  * @summary The RSASSA-PSS signature based on OpenSSL.
- * @modules java.base/sun.security.rsa
  * @library /test/lib /test/jdk/openssl
  * @run junit/othervm NativeRSAPSSSignatureTest
  * @run junit/othervm/policy=test.policy NativeRSAPSSSignatureTest

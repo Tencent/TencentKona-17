@@ -20,7 +20,6 @@
 /*
  * @test
  * @summary The RSA cipher based on OpenSSL.
- * @modules java.base/sun.security.rsa
  * @library /test/lib /test/jdk/openssl
  * @run junit/othervm NativeRSACipherTest
  * @run junit/othervm/policy=test.policy NativeRSACipherTest

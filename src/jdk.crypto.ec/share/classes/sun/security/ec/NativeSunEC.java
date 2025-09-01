@@ -223,4 +223,19 @@ final class NativeSunEC {
     static native void xdhDeriveKey(int curveNID,
             byte[] privKey, byte[] peerPubKey, byte[] sharedKeyOut)
             throws GeneralSecurityException;
+
+    static native byte[] sm2Encrypt(byte[] pubKey,
+            byte[] plaintext, int plaintextOffset, int plaintextLenth);
+    static native byte[] sm2Decrypt(byte[] privKey,
+            byte[] ciphertext, int ciphertextOffset, int ciphertextLenth);
+
+    static native byte[] sm2Sign(byte[] privKey, byte[] pubKey,
+            byte[] id, byte[] message);
+    static native boolean sm2Verify(byte[] pubKey,
+            byte[] id, byte[] message, byte[] signature);
+
+    static native byte[] sm2DeriveKey(
+            byte[] priKey, byte[] pubKey, byte[] ePrivKey, byte[] id,
+            byte[] peerPubKey, byte[] peerEPubKey, byte[] peerId,
+            boolean isInitiator, int sharedKeyLength);
 }

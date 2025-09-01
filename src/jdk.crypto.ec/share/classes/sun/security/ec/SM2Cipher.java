@@ -59,7 +59,9 @@ public final class SM2Cipher extends CipherSpi {
 
     private static final byte[] B0 = new byte[0];
 
-    private final SM2Engine engine = new SM2Engine();
+    private final SM2Engine engine = NativeSunEC.isNativeCryptoEnabled()
+            ? new SM2EngineNative()
+            : new SM2EngineImpl();
     private final Buffer buffer = new Buffer();
 
     @Override

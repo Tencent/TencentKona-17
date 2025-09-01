@@ -20,7 +20,6 @@
 /*
  * @test
  * @summary The EC key pair generator based on OpenSSL.
- * @modules jdk.crypto.ec/sun.security.ec
  * @library /test/lib /test/jdk/openssl
  * @run junit/othervm NativeECDHKeyAgreementTest
  * @run junit/othervm/policy=test.policy NativeECDHKeyAgreementTest

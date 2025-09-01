@@ -1,7 +1,7 @@
 grant {
     permission java.io.FilePermission "<<ALL FILES>>", "read";
     permission java.lang.RuntimePermission "accessClassInPackage.sun.security.ec";
-    permission java.lang.RuntimePermission "loadLibrary.*";
+    permission java.lang.RuntimePermission "accessClassInPackage.sun.security.util";
     permission java.lang.RuntimePermission "modifyThread";
     permission java.util.PropertyPermission "*", "read,write";
 };

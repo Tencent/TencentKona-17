@@ -19,8 +19,9 @@
 
 /*
  * @test
- * @summary The EC crypto based on OpenSSL.
- * @modules jdk.crypto.ec/sun.security.ec
+ * @summary The SunEC crypto based on OpenSSL.
+ * @modules java.base/sun.security.util
+ *          jdk.crypto.ec/sun.security.ec
  * @library /test/lib /test/jdk/openssl
  * @build jdk.crypto.ec/sun.security.ec.NativeSunECWrapper NativeSunECUtil
  * @run junit/othervm -Djdk.sunec.enableNativeCrypto=true NativeSunECTest
@@ -29,6 +30,10 @@
 
 import java.nio.charset.StandardCharsets;
 import java.security.*;
+import java.security.interfaces.ECPrivateKey;
+import java.security.interfaces.ECPublicKey;
+import java.security.spec.ECGenParameterSpec;
+import java.security.spec.SM2ParameterSpec;
 import java.util.Arrays;
 import java.util.HexFormat;
 
@@ -36,12 +41,21 @@ import sun.security.ec.NativeSunECWrapper;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import sun.security.ec.SM2PrivateKey;
+import sun.security.ec.SM2PublicKey;
+import sun.security.util.ECUtil;
 
 @EnableOnNativeSunEC
 public class NativeSunECTest {
 
     private static final HexFormat HEX = HexFormat.of();
+
     private static final byte[] MESSAGE = "test".getBytes(StandardCharsets.UTF_8);
+
+    private static final byte[] ID = "1234567887654321".getBytes(StandardCharsets.UTF_8);
+
+    private static final byte[] ID_A = "ID_A".getBytes(StandardCharsets.UTF_8);
+    private static final byte[] ID_B = "ID_B".getBytes(StandardCharsets.UTF_8);
 
     @Test
     public void testECGenKeyPair() throws Exception {
@@ -341,6 +355,25 @@ public class NativeSunECTest {
                 "Example of ECDSA with P-384",
                 "30EA514FC0D38D8208756F068113C7CADA9F66A3B40EA3B313D040D9B57DD41A332795D02CC7D507FCEF9FAF01A27088",
                 "691B9D4969451A98036D53AA725458602125DE74881BBC333012CA4FA55BDE39D1BF16A6AAE3FE4992C567C6E7892337");
+
+//        checkECDSASignatureKAT(
+//                "secp521r1",
+//                "0100085F47B8E1B8B11B7EB33028C0B2888E304BFC98501955B45BBA1478DC184EEEDF09B86A5F7C21994406072787205E69A63709FE35AA93BA333514B24F961722",
+//                "0098E91EEF9A68452822309C52FAB453F5F117C1DA8ED796B255E9AB8F6410CCA16E59DF403A6BDC6CA467A37056B1E54B3005D8AC030DECFEB68DF18B171885D5C4",
+//                "0164350C321AECFC1CCA1BA4364C9B15656150B4B78D6A48D7D28E7F31985EF17BE8554376B72900712C4B83AD668327231526E313F5F092999A4632FD50D946BC2E",
+//                "SHA512",
+//                "Example of ECDSA with P-521",
+//                "0140C8EDCA57108CE3F7E7A240DDD3AD74D81E2DE62451FC1D558FDC79269ADACD1C2526EEEEF32F8C0432A9D56E2B4A8A732891C37C9B96641A9254CCFE5DC3E2BA",
+//                "00D72F15229D0096376DA6651D9985BFD7C07F8D49583B545DB3EAB20E0A2C1E8615BD9E298455BDEB6B61378E77AF1C54EEE2CE37B2C61F5C9A8232951CB988B5B1");
+//        checkECDSASignatureKAT(
+//                "secp521r1",
+//                "0100085F47B8E1B8B11B7EB33028C0B2888E304BFC98501955B45BBA1478DC184EEEDF09B86A5F7C21994406072787205E69A63709FE35AA93BA333514B24F961722",
+//                "0098E91EEF9A68452822309C52FAB453F5F117C1DA8ED796B255E9AB8F6410CCA16E59DF403A6BDC6CA467A37056B1E54B3005D8AC030DECFEB68DF18B171885D5C4",
+//                "0164350C321AECFC1CCA1BA4364C9B15656150B4B78D6A48D7D28E7F31985EF17BE8554376B72900712C4B83AD668327231526E313F5F092999A4632FD50D946BC2E",
+//                "SHA3-512",
+//                "Example of ECDSA with P-521",
+//                "0140C8EDCA57108CE3F7E7A240DDD3AD74D81E2DE62451FC1D558FDC79269ADACD1C2526EEEEF32F8C0432A9D56E2B4A8A732891C37C9B96641A9254CCFE5DC3E2BA",
+//                "00B25188492D58E808EDEBD7BF440ED20DB771CA7C618595D5398E1B1C0098E300D8C803EC69EC5F46C84FC61967A302D366C627FCFA56F87F241EF921B6E627ADBF");
     }
 
     private void checkECDSASignatureKAT(
@@ -655,5 +688,167 @@ public class NativeSunECTest {
         NativeSunECWrapper.xdhDeriveKey(curveNID, privKey, peerPubKey, sharedKey);
         Assertions.assertArrayEquals(expectedSharedKey, sharedKey,
                 HEX.formatHex(sharedKey));
+    }
+
+    @Test
+    public void testSM2Encryption() throws Exception {
+        KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance("EC");
+        keyPairGen.initialize(new ECGenParameterSpec("curveSM2"));
+        KeyPair keyPair = keyPairGen.generateKeyPair();
+
+        byte[] pubKey = ECUtil.encodePoint(
+                ((ECPublicKey)keyPair.getPublic()).getW(),
+                SM2ParameterSpec.CURVE);
+        byte[] paddedPubKey = NativeSunECWrapper.padZerosForValuePair(pubKey, 1, 32);
+        byte[] ciphertext = NativeSunECWrapper.sm2Encrypt(paddedPubKey,
+                MESSAGE, 0, MESSAGE.length);
+
+        byte[] privKey = ((ECPrivateKey)keyPair.getPrivate()).getS().toByteArray();
+        byte[] cleartext = NativeSunECWrapper.sm2Decrypt(privKey,
+                ciphertext, 0, ciphertext.length);
+
+        Assertions.assertArrayEquals(MESSAGE, cleartext);
+    }
+
+    @Test
+    public void runSM2EncryptionSerially() throws Exception {
+        NativeSunECUtil.execTaskSerially(()-> {
+            testSM2Encryption();
+            return null;
+        });
+    }
+
+    @Test
+    public void runSM2EncryptionParallelly() throws Exception {
+        NativeSunECUtil.execTaskParallelly(()-> {
+            testSM2Encryption();
+            return null;
+        });
+    }
+
+    @Test
+    public void testSM2Signature() throws Exception {
+        KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance("EC");
+        keyPairGen.initialize(new ECGenParameterSpec("curveSM2"));
+        KeyPair keyPair = keyPairGen.generateKeyPair();
+
+        byte[] privKey = ((ECPrivateKey)keyPair.getPrivate()).getS().toByteArray();
+        byte[] pubKey = ECUtil.encodePoint(
+                ((ECPublicKey)keyPair.getPublic()).getW(),
+                SM2ParameterSpec.CURVE);
+        byte[] paddedPubKey = NativeSunECWrapper.padZerosForValuePair(pubKey, 1, 32);
+
+        byte[] signature = NativeSunECWrapper.sm2Sign(privKey, null,
+                ID, MESSAGE);
+
+        boolean verified = NativeSunECWrapper.sm2Verify(paddedPubKey,
+                ID, MESSAGE, signature);
+
+        Assertions.assertTrue(verified);
+    }
+
+    @Test
+    public void runSM2SignatureSerially() throws Exception {
+        NativeSunECUtil.execTaskSerially(()-> {
+            testSM2Signature();
+            return null;
+        });
+    }
+
+    @Test
+    public void runSM2SignatureParallelly() throws Exception {
+        NativeSunECUtil.execTaskParallelly(()-> {
+            testSM2Signature();
+            return null;
+        });
+    }
+
+    @Test
+    public void testSM2SignatureWithPubKey() throws Exception {
+        KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance("EC");
+        keyPairGen.initialize(new ECGenParameterSpec("curveSM2"));
+        KeyPair keyPair = keyPairGen.generateKeyPair();
+
+        byte[] privKey = ((ECPrivateKey)keyPair.getPrivate()).getS().toByteArray();
+        byte[] pubKey = ECUtil.encodePoint(
+                ((ECPublicKey)keyPair.getPublic()).getW(),
+                SM2ParameterSpec.CURVE);
+        byte[] paddedPubKey = NativeSunECWrapper.padZerosForValuePair(pubKey, 1, 32);
+
+        byte[] signature = NativeSunECWrapper.sm2Sign(privKey, paddedPubKey,
+                ID, MESSAGE);
+
+        boolean verified = NativeSunECWrapper.sm2Verify(paddedPubKey,
+                ID, MESSAGE, signature);
+
+        Assertions.assertTrue(verified);
+    }
+
+    @Test
+    public void runSM2SignatureWithPubKeySerially() throws Exception {
+        NativeSunECUtil.execTaskSerially(()-> {
+            testSM2SignatureWithPubKey();
+            return null;
+        });
+    }
+
+    @Test
+    public void runSM2SignatureWithPubKeyParallelly() throws Exception {
+        NativeSunECUtil.execTaskParallelly(()-> {
+            testSM2SignatureWithPubKey();
+            return null;
+        });
+    }
+
+    @Test
+    public void testSM2KeyAgreement() throws Exception {
+        KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance("EC");
+        keyPairGen.initialize(new ECGenParameterSpec("curveSM2"));
+
+        KeyPair keyPairA = keyPairGen.generateKeyPair();
+        KeyPair keyPairTempA = keyPairGen.generateKeyPair();
+
+        KeyPair keyPairB = keyPairGen.generateKeyPair();
+        KeyPair keyPairTempB = keyPairGen.generateKeyPair();
+
+        byte[] sharedKeyA = NativeSunECWrapper.sm2DeriveKey(
+                new SM2PrivateKey((ECPrivateKey) keyPairA.getPrivate()).getEncoded(),
+                new SM2PublicKey((ECPublicKey) keyPairA.getPublic()).getEncoded(),
+                new SM2PrivateKey((ECPrivateKey) keyPairTempA.getPrivate()).getEncoded(),
+                ID_A,
+                new SM2PublicKey((ECPublicKey) keyPairB.getPublic()).getEncoded(),
+                new SM2PublicKey((ECPublicKey) keyPairTempB.getPublic()).getEncoded(),
+                ID_B,
+                true,
+                32);
+
+        byte[] sharedKeyB = NativeSunECWrapper.sm2DeriveKey(
+                new SM2PrivateKey((ECPrivateKey) keyPairB.getPrivate()).getEncoded(),
+                new SM2PublicKey((ECPublicKey) keyPairB.getPublic()).getEncoded(),
+                new SM2PrivateKey((ECPrivateKey) keyPairTempB.getPrivate()).getEncoded(),
+                ID_B,
+                new SM2PublicKey((ECPublicKey) keyPairA.getPublic()).getEncoded(),
+                new SM2PublicKey((ECPublicKey) keyPairTempA.getPublic()).getEncoded(),
+                ID_A,
+                false,
+                32);
+
+        Assertions.assertArrayEquals(sharedKeyB, sharedKeyA);
+    }
+
+    @Test
+    public void runSM2KeyAgreementSerially() throws Exception {
+        NativeSunECUtil.execTaskSerially(()-> {
+            testSM2KeyAgreement();
+            return null;
+        });
+    }
+
+    @Test
+    public void runSM2KeyAgreementParallelly() throws Exception {
+        NativeSunECUtil.execTaskParallelly(()-> {
+            testSM2KeyAgreement();
+            return null;
+        });
     }
 }

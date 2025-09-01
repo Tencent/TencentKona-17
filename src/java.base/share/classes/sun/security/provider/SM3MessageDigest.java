@@ -20,6 +20,8 @@
 
 package sun.security.provider;
 
+import sun.security.util.ArrayUtil;
+
 import java.security.DigestException;
 import java.security.MessageDigest;
 
@@ -28,7 +30,13 @@ import java.security.MessageDigest;
  */
 public final class SM3MessageDigest extends MessageDigest implements Cloneable {
 
-    private SM3Engine engine = new SM3Engine();
+    public static SM3Engine newEngine() {
+        return NativeSun.isNativeCryptoEnabled()
+                ? new SM3EngineNative()
+                : new SM3EngineImpl();
+    }
+
+    private SM3Engine engine = newEngine();
 
     public SM3MessageDigest() {
         super("SM3");
@@ -70,6 +78,7 @@ public final class SM3MessageDigest extends MessageDigest implements Cloneable {
         if (length != 32) {
             throw new DigestException("The length must be 32-bytes");
         }
+        ArrayUtil.nullAndBoundsCheck(buf, offset, length);
 
         engine.doFinal(buf, offset);
         return 32;

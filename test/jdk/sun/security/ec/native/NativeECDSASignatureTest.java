@@ -20,7 +20,6 @@
 /*
  * @test
  * @summary The ECDSA signature based on OpenSSL.
- * @modules jdk.crypto.ec/sun.security.ec
  * @library /test/lib /test/jdk/openssl
  * @run junit/othervm NativeECDSASignatureTest
  * @run junit/othervm/policy=test.policy NativeECDSASignatureTest

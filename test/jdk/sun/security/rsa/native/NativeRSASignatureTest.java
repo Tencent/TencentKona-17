@@ -20,7 +20,6 @@
 /*
  * @test
  * @summary The RSA signature based on OpenSSL.
- * @modules java.base/sun.security.rsa
  * @library /test/lib /test/jdk/openssl
  * @run junit/othervm NativeRSASignatureTest
  * @run junit/othervm/policy=test.policy NativeRSASignatureTest
