@@ -1,10 +1,10 @@
 /*
- * Copyright (C) 2022, 2023, THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) 2022, 2023, Tencent. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. THL A29 Limited designates
+ * published by the Free Software Foundation. Tencent designates
  * this particular file as subject to the "Classpath" exception as provided
  * in the LICENSE file that accompanied this code.
  *
@@ -20,6 +20,8 @@
 
 package sun.security.provider;
 
+import sun.security.util.ArrayUtil;
+
 import java.security.DigestException;
 import java.security.MessageDigest;
 
@@ -28,7 +30,13 @@ import java.security.MessageDigest;
  */
 public final class SM3MessageDigest extends MessageDigest implements Cloneable {
 
-    private SM3Engine engine = new SM3Engine();
+    public static SM3Engine newEngine() {
+        return NativeSun.isNativeCryptoEnabled()
+                ? new SM3EngineNative()
+                : new SM3EngineImpl();
+    }
+
+    private SM3Engine engine = newEngine();
 
     public SM3MessageDigest() {
         super("SM3");
@@ -70,6 +78,7 @@ public final class SM3MessageDigest extends MessageDigest implements Cloneable {
         if (length != 32) {
             throw new DigestException("The length must be 32-bytes");
         }
+        ArrayUtil.nullAndBoundsCheck(buf, offset, length);
 
         engine.doFinal(buf, offset);
         return 32;

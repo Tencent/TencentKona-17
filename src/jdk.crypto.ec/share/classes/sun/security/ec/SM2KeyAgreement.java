@@ -1,10 +1,10 @@
 /*
- * Copyright (C) 2022, 2023, THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) 2022, 2025, Tencent. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. THL A29 Limited designates
+ * published by the Free Software Foundation. Tencent designates
  * this particular file as subject to the "Classpath" exception as provided
  * in the LICENSE file that accompanied this code.
  *
@@ -42,6 +42,7 @@ import static java.security.spec.SM2ParameterSpec.*;
 import sun.security.ec.point.MutablePoint;
 import sun.security.ec.point.Point;
 import sun.security.provider.SM3Engine;
+import sun.security.provider.SM3MessageDigest;
 import sun.security.util.ArrayUtil;
 
 import static sun.security.ec.ECOperations.*;
@@ -56,7 +57,7 @@ public final class SM2KeyAgreement extends KeyAgreementSpi {
     private SM2KeyAgreementParamSpec paramSpec;
     private ECPublicKey peerEphemeralPublicKey;
 
-    private final SM3Engine sm3 = new SM3Engine();
+    private final SM3Engine sm3 = SM3MessageDigest.newEngine();
 
     @Override
     protected void engineInit(Key key, SecureRandom random) {
@@ -68,7 +69,7 @@ public final class SM2KeyAgreement extends KeyAgreementSpi {
     protected void engineInit(Key key, AlgorithmParameterSpec params,
             SecureRandom random)
             throws InvalidKeyException, InvalidAlgorithmParameterException {
-        if (!(key instanceof ECPrivateKey)) {
+        if (!(key instanceof ECPrivateKey ecPrivateKey)) {
             throw new InvalidKeyException("Only accept ECPrivateKey");
         }
 
@@ -77,7 +78,6 @@ public final class SM2KeyAgreement extends KeyAgreementSpi {
                     "Only accept SM2KeyAgreementParamSpec");
         }
 
-        ECPrivateKey ecPrivateKey = (ECPrivateKey) key;
         BigInteger s = ecPrivateKey.getS();
         if (s.compareTo(ZERO) <= 0 || s.compareTo(ORDER) >= 0) {
             throw new InvalidKeyException("The private key must be " +

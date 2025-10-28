@@ -1,10 +1,10 @@
 /*
- * Copyright (C) 2022, 2023, THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) 2022, 2023, Tencent. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. THL A29 Limited designates
+ * published by the Free Software Foundation. Tencent designates
  * this particular file as subject to the "Classpath" exception as provided
  * in the LICENSE file that accompanied this code.
  *
@@ -59,7 +59,9 @@ public final class SM2Cipher extends CipherSpi {
 
     private static final byte[] B0 = new byte[0];
 
-    private final SM2Engine engine = new SM2Engine();
+    private final SM2Engine engine = NativeSunEC.isNativeCryptoEnabled()
+            ? new SM2EngineNative()
+            : new SM2EngineImpl();
     private final Buffer buffer = new Buffer();
 
     @Override
