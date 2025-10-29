@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025, THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) 2025, Tencent. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -20,7 +20,6 @@
 /*
  * @test
  * @summary The EC key pair generator based on OpenSSL.
- * @modules jdk.crypto.ec/sun.security.ec
  * @library /test/lib /test/jdk/openssl
  * @run junit/othervm NativeECKeyPairGeneratorTest
  * @run junit/othervm/policy=test.policy NativeECKeyPairGeneratorTest

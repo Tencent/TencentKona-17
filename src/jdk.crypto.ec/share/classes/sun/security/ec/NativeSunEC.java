@@ -1,10 +1,10 @@
 /*
- * Copyright (C) 2025, THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) 2025, Tencent. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation. THL A29 Limited designates
+ * published by the Free Software Foundation. Tencent designates
  * this particular file as subject to the "Classpath" exception as provided
  * in the LICENSE file that accompanied this code.
  *
@@ -223,4 +223,19 @@ final class NativeSunEC {
     static native void xdhDeriveKey(int curveNID,
             byte[] privKey, byte[] peerPubKey, byte[] sharedKeyOut)
             throws GeneralSecurityException;
+
+    static native byte[] sm2Encrypt(byte[] pubKey,
+            byte[] plaintext, int plaintextOffset, int plaintextLenth);
+    static native byte[] sm2Decrypt(byte[] privKey,
+            byte[] ciphertext, int ciphertextOffset, int ciphertextLenth);
+
+    static native byte[] sm2Sign(byte[] privKey, byte[] pubKey,
+            byte[] id, byte[] message);
+    static native boolean sm2Verify(byte[] pubKey,
+            byte[] id, byte[] message, byte[] signature);
+
+    static native byte[] sm2DeriveKey(
+            byte[] priKey, byte[] pubKey, byte[] ePrivKey, byte[] id,
+            byte[] peerPubKey, byte[] peerEPubKey, byte[] peerId,
+            boolean isInitiator, int sharedKeyLength);
 }

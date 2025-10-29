@@ -77,7 +77,7 @@ typedef struct {
 /* Base table for low value file descriptors */
 static fdEntry_t* fdTable = NULL;
 /* Maximum size of base table (in number of entries). */
-static const int fdTableMaxSize = 0x1000; /* 4K */
+static int fdTableMaxSize = 0x1000; /* 4K */
 /* Actual size of base table (in number of entries) */
 static int fdTableLen = 0;
 /* Max. theoretical number of file descriptors on system. */
@@ -120,6 +120,17 @@ static void __attribute((constructor)) init() {
     } else {
         /* We just do not know. */
         fdLimit = INT_MAX;
+    }
+
+    char* table_max_size = getenv("KONA_NET_FDTABLE_MAX_SIZE");
+    if (table_max_size != NULL) {
+        int value = atoi(table_max_size);
+        if (value > fdTableMaxSize) {
+            fdTableMaxSize = value;
+        } else {
+            fprintf(stderr, "library initialization failed - "
+                    "unable to reset fdTableMaxSize - invalid value with KONA_NET_FDTABLE_MAX_SIZE");
+        }
     }
 
     /* Allocate table for low value file descriptors. */

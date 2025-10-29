@@ -1,0 +1,6 @@
+grant {
+    permission java.io.FilePermission "<<ALL FILES>>", "read";
+    permission java.lang.RuntimePermission "accessClassInPackage.sun.security.provider";
+    permission java.lang.RuntimePermission "modifyThread";
+    permission java.util.PropertyPermission "*", "read,write";
+};
