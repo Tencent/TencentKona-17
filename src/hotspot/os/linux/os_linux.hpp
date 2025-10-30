@@ -22,6 +22,12 @@
  *
  */
 
+/*
+ * This file has been modified by Loongson Technology in 2023. These
+ * modifications are Copyright (c) 2023, Loongson Technology, and are made
+ * available on the same license terms set forth above.
+ */
+
 #ifndef OS_LINUX_OS_LINUX_HPP
 #define OS_LINUX_OS_LINUX_HPP
 
@@ -190,6 +196,8 @@ class Linux {
   // Stack repair handling
 
   // none present
+
+  static int sched_active_processor_count();
 
  private:
   static void numa_init();

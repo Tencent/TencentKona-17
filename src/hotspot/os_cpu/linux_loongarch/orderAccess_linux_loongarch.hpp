@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2003, 2013, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2015, 2022, Loongson Technology. All rights reserved.
+ * Copyright (c) 2015, 2023, Loongson Technology. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,14 +26,13 @@
 #ifndef OS_CPU_LINUX_LOONGARCH_ORDERACCESS_LINUX_LOONGARCH_HPP
 #define OS_CPU_LINUX_LOONGARCH_ORDERACCESS_LINUX_LOONGARCH_HPP
 
+#include "runtime/globals.hpp"
 #include "runtime/os.hpp"
 
 // Included in orderAccess.hpp header file.
 
 // Implementation of class OrderAccess.
-#define inlasm_sync(v) if (os::is_ActiveCoresMP()) \
-                        __asm__ __volatile__ ("nop"   : : : "memory"); \
-                      else \
+#define inlasm_sync(v) if (!UseActiveCoresMP) \
                         __asm__ __volatile__ ("dbar %0"   : :"K"(v) : "memory");
 #define inlasm_synci() __asm__ __volatile__ ("ibar 0"   : : : "memory");
 
