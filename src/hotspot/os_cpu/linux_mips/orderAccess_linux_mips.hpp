@@ -26,14 +26,13 @@
 #ifndef OS_CPU_LINUX_MIPS_VM_ORDERACCESS_LINUX_MIPS_HPP
 #define OS_CPU_LINUX_MIPS_VM_ORDERACCESS_LINUX_MIPS_HPP
 
+#include "runtime/globals.hpp"
 #include "runtime/os.hpp"
 
 // Included in orderAccess.hpp header file.
 
 // Implementation of class OrderAccess.
-#define inlasm_sync() if (os::is_ActiveCoresMP()) \
-                        __asm__ __volatile__ ("nop"   : : : "memory"); \
-                      else \
+#define inlasm_sync() if (!UseActiveCoresMP) \
                         __asm__ __volatile__ ("sync"   : : : "memory");
 #define inlasm_synci() __asm__ __volatile__ ("synci 0($0)"   : : : "memory");
 

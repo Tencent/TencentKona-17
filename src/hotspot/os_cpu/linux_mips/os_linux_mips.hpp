@@ -34,6 +34,4 @@
   // Note: Currently only used in 64 bit Windows implementations
   static bool register_code_area(char *low, char *high) { return true; }
 
-  static bool is_ActiveCoresMP();
-
 #endif // OS_CPU_LINUX_MIPS_VM_OS_LINUX_MIPS_HPP

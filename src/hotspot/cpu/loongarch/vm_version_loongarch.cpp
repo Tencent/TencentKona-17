@@ -31,6 +31,7 @@
 #include "runtime/java.hpp"
 #include "runtime/stubCodeGenerator.hpp"
 #include "runtime/vm_version.hpp"
+#include "os_linux.hpp"
 #ifdef TARGET_OS_FAMILY_linux
 # include "os_linux.inline.hpp"
 #endif
@@ -410,6 +411,18 @@ void VM_Version::get_processor_features() {
     if (!FLAG_IS_DEFAULT(UsePopCountInstruction))
       warning("PopCountI/L/VI(4) employs LSX whereas PopCountVI(8) hinges on LASX.");
     FLAG_SET_DEFAULT(UsePopCountInstruction, false);
+  }
+
+  if (UseActiveCoresMP) {
+    if (os::Linux::sched_active_processor_count() != 1) {
+      if (!FLAG_IS_DEFAULT(UseActiveCoresMP))
+        warning("UseActiveCoresMP disabled because active processors are more than one.");
+      FLAG_SET_DEFAULT(UseActiveCoresMP, false);
+    }
+  } else { // !UseActiveCoresMP
+    if (FLAG_IS_DEFAULT(UseActiveCoresMP) && os::Linux::sched_active_processor_count() == 1) {
+      FLAG_SET_DEFAULT(UseActiveCoresMP, true);
+    }
   }
 
   UNSUPPORTED_OPTION(CriticalJNINatives);
