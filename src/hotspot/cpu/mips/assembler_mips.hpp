@@ -1200,7 +1200,7 @@ public:
   void swr  (Register rt, Register base, int off)     { emit_long(insn_ORRI(swr_op,   (int)base->encoding(), (int)rt->encoding(), off)); }
   void synci(Register base, int off)                  { emit_long(insn_ORRI(regimm_op, (int)base->encoding(), synci_op, off)); }
   void sync ()                                        {
-    if (os::is_ActiveCoresMP())
+    if (UseActiveCoresMP)
       emit_long(0);
     else
       emit_long(sync_op);

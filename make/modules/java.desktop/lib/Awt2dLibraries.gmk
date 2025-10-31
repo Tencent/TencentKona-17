@@ -205,8 +205,12 @@ ifeq ($(call isTargetOs, windows macosx), false)
         common/awt/systemscale \
         common/font \
         common/java2d/opengl \
-        common/java2d/x11 \
-        $(LIBPIPEWIRE_HEADER_DIRS)
+        common/java2d/x11
+
+    # exclude pipewire from the AIX build, no Wayland support
+    ifeq ($(call isTargetOs, aix), false)
+      LIBAWT_XAWT_EXTRA_HEADER_DIRS += $(LIBPIPEWIRE_HEADER_DIRS)
+    endif
 
     LIBAWT_XAWT_CFLAGS += -DXAWT -DXAWT_HACK \
         $(FONTCONFIG_CFLAGS) \
@@ -712,7 +716,8 @@ ifeq ($(ENABLE_HEADLESS_ONLY), false)
   endif
 
   LIBSPLASHSCREEN_CFLAGS += -DSPLASHSCREEN -DPNG_NO_MMX_CODE \
-                            -DPNG_ARM_NEON_OPT=0 -DPNG_ARM_NEON_IMPLEMENTATION=0
+                            -DPNG_ARM_NEON_OPT=0 -DPNG_ARM_NEON_IMPLEMENTATION=0 \
+                            -DPNG_LOONGARCH_LSX_OPT=0
 
   ifeq ($(call isTargetOs, linux), true)
     ifeq ($(call isTargetCpuArch, ppc), true)

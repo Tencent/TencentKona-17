@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 1997, 2014, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2015, 2022, Loongson Technology. All rights reserved.
+ * Copyright (c) 2015, 2025, Loongson Technology. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -445,21 +445,29 @@ void VM_Version::get_processor_features() {
     FLAG_SET_DEFAULT(UseSHA, false);
   }
 
+  if (UseSHA1Intrinsics) {
+    warning("Intrinsics for SHA-1 crypto hash functions not available on this CPU.");
+    FLAG_SET_DEFAULT(UseSHA1Intrinsics, false);
+  }
+
+  if (UseSHA256Intrinsics) {
+    warning("Intrinsics for SHA-224 and SHA-256 crypto hash functions not available on this CPU.");
+    FLAG_SET_DEFAULT(UseSHA256Intrinsics, false);
+  }
+
+  if (UseSHA512Intrinsics) {
+    warning("Intrinsics for SHA-384 and SHA-512 crypto hash functions not available on this CPU.");
+    FLAG_SET_DEFAULT(UseSHA512Intrinsics, false);
+  }
+
   if (UseSHA3Intrinsics) {
-    warning("SHA3 intrinsics are not available on this CPU.");
+    warning("Intrinsics for SHA3-224, SHA3-256, SHA3-384 and SHA3-512 crypto hash functions not available on this CPU.");
     FLAG_SET_DEFAULT(UseSHA3Intrinsics, false);
   }
 
   if (UseMD5Intrinsics) {
     warning("MD5 intrinsics are not available on this CPU");
     FLAG_SET_DEFAULT(UseMD5Intrinsics, false);
-  }
-
-  if (UseSHA1Intrinsics || UseSHA256Intrinsics || UseSHA512Intrinsics) {
-    warning("SHA intrinsics are not available on this CPU");
-    FLAG_SET_DEFAULT(UseSHA1Intrinsics, false);
-    FLAG_SET_DEFAULT(UseSHA256Intrinsics, false);
-    FLAG_SET_DEFAULT(UseSHA512Intrinsics, false);
   }
 
   if (UseAES) {
@@ -501,6 +509,17 @@ void VM_Version::get_processor_features() {
 
   if (FLAG_IS_DEFAULT(UseFMA)) {
     FLAG_SET_DEFAULT(UseFMA, true);
+  }
+
+  if (UseActiveCoresMP) {
+    if (os::Linux::sched_active_processor_count() != 1) {
+      if (!FLAG_IS_DEFAULT(UseActiveCoresMP))
+        warning("UseActiveCoresMP disabled because active processors are more than one.");
+      FLAG_SET_DEFAULT(UseActiveCoresMP, false);
+    }
+  } else {
+    if (!os::is_MP())
+      FLAG_SET_DEFAULT(UseActiveCoresMP, true);
   }
 
   UNSUPPORTED_OPTION(CriticalJNINatives);
