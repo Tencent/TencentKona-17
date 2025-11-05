@@ -811,7 +811,3 @@ int os::extra_bang_size_in_bytes() {
   // MIPS does not require the additional stack bang.
   return 0;
 }
-
-bool os::is_ActiveCoresMP() {
-  return UseActiveCoresMP && _initial_active_processor_count == 1;
-}
