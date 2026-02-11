@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2003, 2013, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2015, 2022, Loongson Technology. All rights reserved.
+ * Copyright (c) 2015, 2026, Loongson Technology. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -285,11 +285,11 @@ void TemplateTable::sipush() {
 // T2 : index
 // T3 : cpool
 // T8 : tag
-void TemplateTable::ldc(bool wide) {
+void TemplateTable::ldc(LdcType type) {
   transition(vtos, vtos);
   Label call_ldc, notFloat, notClass, notInt, Done;
   // get index in cpool
-  if (wide) {
+  if (is_ldc_wide(type)) {
     __ get_unsigned_2_byte_index_at_bcp(T2, 1);
   } else {
     __ lbu(T2, at_bcp(1));
@@ -329,7 +329,7 @@ void TemplateTable::ldc(bool wide) {
   __ delayed()->dsll(T2, T2, Address::times_8);
 
   __ bind(call_ldc);
-  __ move(A1, wide);
+  __ move(A1, is_ldc_wide(type) ? 1 : 0);
   call_VM(FSR, CAST_FROM_FN_PTR(address, InterpreterRuntime::ldc), A1);
   //__ push(atos);
   __ daddiu(SP, SP, - Interpreter::stackElementSize);
@@ -495,13 +495,13 @@ void TemplateTable::condy_helper(Label& Done) {
 }
 
 // Fast path for caching oop constants.
-void TemplateTable::fast_aldc(bool wide) {
+void TemplateTable::fast_aldc(LdcType type) {
   transition(vtos, atos);
 
   Register result = FSR;
   Register tmp = SSR;
   Register rarg = A1;
-  int index_size = wide ? sizeof(u2) : sizeof(u1);
+  int index_size = is_ldc_wide(type) ? sizeof(u2) : sizeof(u1);
 
   Label resolved;
 
