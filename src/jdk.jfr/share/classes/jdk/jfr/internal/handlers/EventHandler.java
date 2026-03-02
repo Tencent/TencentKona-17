@@ -142,4 +142,19 @@ public abstract class EventHandler {
     private void throwError(String classes) {
         throw new InternalError("Method parameters don't match fields in class " + classes);
     }
+
+    // JavaNativeAllocationEvent: addr, allocationSize
+    public void write(long start, long duration, long addr, long allocationSize) {
+        throwError("JavaNativeAllocationEvent");
+    }
+
+    // JavaNativeFreeEvent: addr
+    public void write(long start, long duration, long addr) {
+        throwError("JavaNativeFreeEvent");
+    }
+
+    // JavaNativeReallocateEvent: freeAddr, allocAddr, allocationSize
+    public void write(long start, long duration, long freeAddr, long allocAddr, long allocationSize) {
+        throwError("JavaNativeReallocateEvent");
+    }
 }

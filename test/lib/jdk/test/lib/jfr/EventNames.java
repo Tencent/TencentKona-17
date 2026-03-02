@@ -205,6 +205,9 @@ public class EventNames {
     public final static String SecurityProviderService = PREFIX + "SecurityProviderService";
     public static final String DirectBufferStatistics = PREFIX + "DirectBufferStatistics";
     public static final String Deserialization = PREFIX + "Deserialization";
+    public static final String JavaNativeAllocation = PREFIX + "JavaNativeAllocation";
+    public static final String JavaNativeFree = PREFIX + "JavaNativeFree";
+    public static final String JavaNativeReallocate = PREFIX + "JavaNativeReallocate";
 
     // Containers
     public static final String ContainerConfiguration = PREFIX + "ContainerConfiguration";
