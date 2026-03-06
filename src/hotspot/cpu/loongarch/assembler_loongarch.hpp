@@ -1963,7 +1963,7 @@ public:
   void dbar(int hint)      {
     assert(is_uimm(hint, 15), "not a unsigned 15-bit int");
 
-    if (os::is_ActiveCoresMP())
+    if (UseActiveCoresMP)
       andi(R0, R0, 0);
     else
       emit_int32(insn_I15(dbar_op, hint));

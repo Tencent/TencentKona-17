@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 1999, 2014, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2015, 2021, Loongson Technology. All rights reserved.
+ * Copyright (c) 2015, 2023, Loongson Technology. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -522,8 +522,4 @@ void os::verify_stack_alignment() {
 int os::extra_bang_size_in_bytes() {
   // LA does not require the additional stack bang.
   return 0;
-}
-
-bool os::is_ActiveCoresMP() {
-  return UseActiveCoresMP && _initial_active_processor_count == 1;
 }
