@@ -617,27 +617,16 @@
 //   OS_CPU_HEADER(vmStructs)          --> vmStructs_linux_x86.hpp
 //
 // basename<cpu>.hpp / basename<cpu>.inline.hpp
-#if defined(LOONGARCH) && !defined(ZERO)
-#define CPU_HEADER_H(basename)         XSTR(basename ## _loongarch.h)
-#define CPU_HEADER(basename)           XSTR(basename ## _loongarch.hpp)
-#define CPU_HEADER_INLINE(basename)    XSTR(basename ## _loongarch.inline.hpp)
-#else
 #define CPU_HEADER_H(basename)         XSTR(CPU_HEADER_STEM(basename).h)
 #define CPU_HEADER(basename)           XSTR(CPU_HEADER_STEM(basename).hpp)
 #define CPU_HEADER_INLINE(basename)    XSTR(CPU_HEADER_STEM(basename).inline.hpp)
-#endif
 // basename<os>.hpp / basename<os>.inline.hpp
 #define OS_HEADER_H(basename)          XSTR(OS_HEADER_STEM(basename).h)
 #define OS_HEADER(basename)            XSTR(OS_HEADER_STEM(basename).hpp)
 #define OS_HEADER_INLINE(basename)     XSTR(OS_HEADER_STEM(basename).inline.hpp)
 // basename<os><cpu>.hpp / basename<os><cpu>.inline.hpp
-#if defined(LOONGARCH) && !defined(ZERO)
-#define OS_CPU_HEADER(basename)        XSTR(basename ## _linux_loongarch.hpp)
-#define OS_CPU_HEADER_INLINE(basename) XSTR(basename ## _linux_loongarch.inline.hpp)
-#else
 #define OS_CPU_HEADER(basename)        XSTR(OS_CPU_HEADER_STEM(basename).hpp)
 #define OS_CPU_HEADER_INLINE(basename) XSTR(OS_CPU_HEADER_STEM(basename).inline.hpp)
-#endif
 // basename<compiler>.hpp / basename<compiler>.inline.hpp
 #define COMPILER_HEADER(basename)        XSTR(COMPILER_HEADER_STEM(basename).hpp)
 #define COMPILER_HEADER_INLINE(basename) XSTR(COMPILER_HEADER_STEM(basename).inline.hpp)

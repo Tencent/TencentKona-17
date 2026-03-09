@@ -548,11 +548,6 @@ AC_DEFUN([PLATFORM_SETUP_LEGACY_VARS_HELPER],
 
   # This is identical with OPENJDK_*, but define anyway for consistency.
   HOTSPOT_$1_CPU_ARCH=${OPENJDK_$1_CPU_ARCH}
-  # Override hotspot cpu definitions for LoongArch platforms
-  if test "x$OPENJDK_$1_CPU" = xloongarch64; then
-    HOTSPOT_TARGET_CPU_ARCH=loongarch
-  fi
-
   AC_SUBST(HOTSPOT_$1_CPU_ARCH)
 
   # Setup HOTSPOT_$1_CPU_DEFINE

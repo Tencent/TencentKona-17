@@ -1027,14 +1027,14 @@ void PhaseOutput::Process_OopMap_Node(MachNode *mach, int current_offset) {
     //
     // ;; Safepoint:
     // ---> pc_offset=304
-    // 0x2d6ff230: lui at, 0x2b7a            ; OopMap{s2=Oop s5=Oop t4=Oop off=308}
+    // 0x2d6ff230: lu12i_w at, 0x2b7a            ; OopMap{s2=Oop s5=Oop t4=Oop off=308}
     //                                       ;*goto
     //                                       ; - java.util.Hashtable::get@64 (line 353)
     // ---> last_pd(308)
-    // 0x2d6ff234: lw at, 0xffffc100(at)     ;*goto
+    // 0x2d6ff234: ld_w at, 0xffffc100(at)     ;*goto
     //                                       ; - java.util.Hashtable::get@64 (line 353)
     //                                       ;   {poll}
-    // 0x2d6ff238: addiu s0, zero, 0x0
+    // 0x2d6ff238: move $s0, $zero
     safepoint_pc_offset += sfn->size(C->regalloc()) - 4;
 #endif
     C->debug_info()->add_safepoint(safepoint_pc_offset, sfn->_oop_map);
