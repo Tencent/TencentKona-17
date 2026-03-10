@@ -691,7 +691,7 @@ void LIR_Assembler::emit_op2(LIR_Op2* op) {
       comp_fl2i(op->code(), op->in_opr1(), op->in_opr2(), op->result_opr(), op);
       break;
 
-#ifndef RISCV
+#if !defined(RISCV) && !defined(LOONGARCH)
     case lir_cmove:
       cmove(op->condition(), op->in_opr1(), op->in_opr2(), op->result_opr(), op->type());
       break;
@@ -758,7 +758,7 @@ void LIR_Assembler::emit_op2(LIR_Op2* op) {
   }
 }
 
-#ifdef RISCV
+#if defined(RISCV) || defined(LOONGARCH)
 void LIR_Assembler::emit_op4(LIR_Op4* op) {
   switch(op->code()) {
     case lir_cmove:

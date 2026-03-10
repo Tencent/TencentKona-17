@@ -143,7 +143,7 @@ static bool process_get_lwp_regs(struct ps_prochandle* ph, pid_t pid, struct use
     return false;
   }
   return true;
-#elif defined(PTRACE_GETREGS_REQ)
+#elif defined(PTRACE_GETREGS_REQ) && !defined(loongarch64)
  if (ptrace(PTRACE_GETREGS_REQ, pid, NULL, user) < 0) {
    print_debug("ptrace(PTRACE_GETREGS, ...) failed for lwp(%d) errno(%d) \"%s\"\n", pid,
                errno, strerror(errno));
