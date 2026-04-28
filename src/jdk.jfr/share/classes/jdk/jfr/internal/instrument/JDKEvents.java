@@ -45,6 +45,9 @@ import jdk.jfr.events.ExceptionThrownEvent;
 import jdk.jfr.events.FileForceEvent;
 import jdk.jfr.events.FileReadEvent;
 import jdk.jfr.events.FileWriteEvent;
+import jdk.jfr.events.JavaNativeAllocationEvent;
+import jdk.jfr.events.JavaNativeFreeEvent;
+import jdk.jfr.events.JavaNativeReallocateEvent;
 import jdk.jfr.events.DeserializationEvent;
 import jdk.jfr.events.InitialSecurityPropertyEvent;
 import jdk.jfr.events.ProcessStartEvent;
@@ -87,6 +90,9 @@ public final class JDKEvents {
         ErrorThrownEvent.class,
         ActiveSettingEvent.class,
         ActiveRecordingEvent.class,
+        JavaNativeAllocationEvent.class,
+        JavaNativeFreeEvent.class,
+        JavaNativeReallocateEvent.class,
         jdk.internal.event.DeserializationEvent.class,
         jdk.internal.event.ProcessStartEvent.class,
         jdk.internal.event.SecurityPropertyModificationEvent.class,
@@ -107,7 +113,8 @@ public final class JDKEvents {
         FileChannelImplInstrumentor.class,
         SocketInputStreamInstrumentor.class,
         SocketOutputStreamInstrumentor.class,
-        SocketChannelImplInstrumentor.class
+        SocketChannelImplInstrumentor.class,
+        UnsafeInstrumentor.class
     };
 
     private static final Class<?>[] targetClasses = new Class<?>[instrumentationClasses.length];

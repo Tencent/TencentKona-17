@@ -35,4 +35,7 @@ public final class Handlers {
     public static final EventHandler FILE_FORCE = Utils.getHandler(FileForceEvent.class);
     public static final EventHandler ERROR_THROWN = Utils.getHandler(ErrorThrownEvent.class);
     public static final EventHandler EXCEPTION_THROWN = Utils.getHandler(ExceptionThrownEvent.class);
+    public static final EventHandler NATIVE_ALLOCATION = Utils.getHandler(JavaNativeAllocationEvent.class);
+    public static final EventHandler NATIVE_FREE = Utils.getHandler(JavaNativeFreeEvent.class);
+    public static final EventHandler NATIVE_REALLOCATE = Utils.getHandler(JavaNativeReallocateEvent.class);
 }
