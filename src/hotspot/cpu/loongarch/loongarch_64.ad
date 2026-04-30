@@ -578,6 +578,10 @@ reg_class p_reg %{
   return _PTR_REG_mask;
 %}
 
+reg_class no_FP_reg %{
+  return _NO_FP_REG_mask;
+%}
+
 reg_class no_T8_p_reg(
                  S7, S7_H,
                  S0, S0_H,
@@ -813,6 +817,7 @@ source_hpp %{
 extern RegMask _ANY_REG32_mask;
 extern RegMask _ANY_REG_mask;
 extern RegMask _PTR_REG_mask;
+extern RegMask _NO_FP_REG_mask;
 
 class CallStubImpl {
 
@@ -940,6 +945,7 @@ source %{
 RegMask _ANY_REG32_mask;
 RegMask _ANY_REG_mask;
 RegMask _PTR_REG_mask;
+RegMask _NO_FP_REG_mask;
 
 void reg_mask_init() {
   _ANY_REG32_mask = _ALL_REG32_mask;
@@ -958,6 +964,9 @@ void reg_mask_init() {
     _ANY_REG_mask.SUBTRACT(_FP_REG_mask);
     _PTR_REG_mask.SUBTRACT(_FP_REG_mask);
   }
+
+  _NO_FP_REG_mask = _PTR_REG_mask;
+  _NO_FP_REG_mask.Remove(OptoReg::as_OptoReg(r22->as_VMReg()));
 }
 
 void PhaseOutput::pd_perform_mach_node_analysis() {
@@ -3527,6 +3536,17 @@ operand no_T8_mRegP() %{
   interface(REG_INTER);
 %}
 
+// This operand is not allowed to use FP even if
+// FP is not used to hold the frame pointer.
+operand no_FP_mRegP() %{
+  constraint(ALLOC_IN_RC(no_FP_reg));
+  match(RegP);
+  match(mRegP);
+
+  format %{  %}
+  interface(REG_INTER);
+%}
+
 operand no_Ax_mRegP() %{
   constraint(ALLOC_IN_RC(no_Ax_p_reg));
   match(RegP);
@@ -5234,19 +5254,19 @@ instruct loadConNKlass(mRegN dst, immNKlass src) %{
 // Also known as an 'interprocedural jump'.
 // Target of jump will eventually return to caller.
 // TailJump below removes the return address.
-instruct TailCalljmpInd(mRegP jump_target, mRegP method_ptr) %{
+// Don't use FP for 'jump_target' because a MachEpilogNode has already been
+// emitted just above the TailCall which has reset FP to the caller state.
+instruct TailCalljmpInd(no_FP_mRegP jump_target, s3_RegP method_ptr) %{
   match(TailCall jump_target method_ptr);
   ins_cost(300);
   format %{ "JMP    $jump_target \t# @TailCalljmpInd" %}
 
   ins_encode %{
     Register target = $jump_target$$Register;
-    Register    ptr = $method_ptr$$Register;
 
     // RA will be used in generate_forward_exception()
     __ push(RA);
 
-    __ move(S3, ptr);
     __ jr(target);
   %}
 
@@ -9928,24 +9948,17 @@ instruct Ret() %{
 // "restore" before this instruction (in Epilogue), we need to materialize it
 // in %i0.
 //FIXME
-instruct tailjmpInd(no_Ax_mRegP jump_target, mRegP ex_oop) %{
+instruct tailjmpInd(no_FP_mRegP jump_target, a0_RegP ex_oop, mA1RegI exception_pc) %{
   match( TailJump jump_target ex_oop );
   ins_cost(200);
   format %{ "Jmp     $jump_target  ; ex_oop = $ex_oop #@tailjmpInd" %}
   ins_encode %{
     Register target = $jump_target$$Register;
 
-    // V0, V1 are indicated in:
+    // A0, A1 are indicated in:
     //     [stubGenerator_loongarch.cpp] generate_forward_exception()
     //     [runtime_loongarch.cpp] OptoRuntime::generate_exception_blob()
-    //
-    Register oop  = $ex_oop$$Register;
-    Register exception_oop = V0;
-    Register exception_pc = V1;
-
-    __ move(exception_pc, RA);
-    __ move(exception_oop, oop);
-
+    __ move($exception_pc$$Register, RA);
     __ jr(target);
   %}
   ins_pipe( pipe_jump );
