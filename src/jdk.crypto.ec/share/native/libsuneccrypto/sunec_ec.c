@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025, Tencent. All rights reserved.
+ * Copyright (C) 2025, 2026, Tencent. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,6 +22,7 @@
 
 #include "jni.h"
 
+#include <openssl/crypto.h>
 #include <openssl/ec.h>
 #include <openssl/err.h>
 #include <openssl/rand.h>
@@ -71,6 +72,12 @@ int validate_point(const EC_GROUP *group, const EC_POINT *point) {
 JNIEXPORT void JNICALL Java_sun_security_ec_NativeSunEC_ecGenKeyPair
   (JNIEnv *env, jclass clazz, jint curveNID, jbyteArray seed,
    jbyteArray privKeyOut, jbyteArray pubKeyOut) {
+    if (privKeyOut == NULL || pubKeyOut == NULL) {
+        sunec_throw(env, NULL_POINTER_EXCEPTION,
+                "Private key output and public key output must not be null");
+        return;
+    }
+
     EC_KEY *ec_key = EC_KEY_new_by_curve_name(curveNID);
     if (!ec_key) {
         sunec_throw(env, INVALID_ALGO_PARAM_EXCEPTION, "Unsupported EC curve");
@@ -79,14 +86,25 @@ JNIEXPORT void JNICALL Java_sun_security_ec_NativeSunEC_ecGenKeyPair
 
     if (seed != NULL) {
         jsize seed_len = (*env)->GetArrayLength(env, seed);
-        jbyte *seed_bytes = (*env)->GetPrimitiveArrayCritical(env, seed, NULL);
-        if (!seed_bytes) {
-            EC_KEY_free(ec_key);
-            sunec_throw(env, ILLEGAL_STATE_EXCEPTION, "Failed to access seed array");
-            return;
+        if (seed_len > 0) {
+            // Copy the seed into a native buffer rather than pinning the Java
+            // array via GetPrimitiveArrayCritical; the buffer is scrubbed with
+            // OPENSSL_clear_free since seed material feeds the RNG.
+            uint8_t *seed_buf = OPENSSL_malloc(seed_len);
+            if (!seed_buf) {
+                EC_KEY_free(ec_key);
+                sunec_throw(env, ILLEGAL_STATE_EXCEPTION, "Memory allocation failed");
+                return;
+            }
+            (*env)->GetByteArrayRegion(env, seed, 0, seed_len, (jbyte*)seed_buf);
+            if ((*env)->ExceptionCheck(env)) {
+                OPENSSL_clear_free(seed_buf, seed_len);
+                EC_KEY_free(ec_key);
+                return;
+            }
+            RAND_seed(seed_buf, seed_len);
+            OPENSSL_clear_free(seed_buf, seed_len);
         }
-        RAND_seed(seed_bytes, seed_len);
-        (*env)->ReleasePrimitiveArrayCritical(env, seed, seed_bytes, JNI_ABORT);
     }
 
     if (!EC_KEY_generate_key(ec_key)) {
@@ -104,38 +122,42 @@ JNIEXPORT void JNICALL Java_sun_security_ec_NativeSunEC_ecGenKeyPair
         return;
     }
 
+    // Encode the private key into a native buffer, then copy it out to the Java
+    // array with SetByteArrayRegion. The native buffer is always scrubbed with
+    // OPENSSL_clear_free; on failure nothing is written back to the Java array.
     jsize priv_key_len = (*env)->GetArrayLength(env, privKeyOut);
-    jbyte *priv_key_bytes = (*env)->GetPrimitiveArrayCritical(env, privKeyOut, NULL);
-    if (!priv_key_bytes) {
+    uint8_t *priv_key_buf = OPENSSL_malloc(priv_key_len);
+    if (!priv_key_buf) {
         EC_KEY_free(ec_key);
-        sunec_throw(env, ILLEGAL_STATE_EXCEPTION, "Failed to access private key buffer");
+        sunec_throw(env, ILLEGAL_STATE_EXCEPTION, "Memory allocation failed");
         return;
     }
-
     int encode_priv_key_ok = BN_bn2binpad(
-            priv_bn, (uint8_t*)priv_key_bytes, priv_key_len) == priv_key_len;
-    (*env)->ReleasePrimitiveArrayCritical(
-            env, privKeyOut, priv_key_bytes, encode_priv_key_ok ? 0 : JNI_ABORT);
+            priv_bn, priv_key_buf, priv_key_len) == priv_key_len;
+    if (encode_priv_key_ok) {
+        (*env)->SetByteArrayRegion(env, privKeyOut, 0, priv_key_len, (jbyte*)priv_key_buf);
+    }
+    OPENSSL_clear_free(priv_key_buf, priv_key_len);
     if (!encode_priv_key_ok) {
-        memset(priv_key_bytes, 0, priv_key_len);
         EC_KEY_free(ec_key);
         sunec_throw(env, ILLEGAL_STATE_EXCEPTION, "Private key encoding failed");
         return;
     }
 
     jsize pub_key_len = (*env)->GetArrayLength(env, pubKeyOut);
-    jbyte* pub_key_bytes = (*env)->GetPrimitiveArrayCritical(env, pubKeyOut, NULL);
-    if (!pub_key_bytes) {
+    uint8_t *pub_key_buf = OPENSSL_malloc(pub_key_len);
+    if (!pub_key_buf) {
         EC_KEY_free(ec_key);
-        sunec_throw(env, ILLEGAL_STATE_EXCEPTION, "Failed to access public key buffer");
+        sunec_throw(env, ILLEGAL_STATE_EXCEPTION, "Memory allocation failed");
         return;
     }
-
     int encode_pub_key_ok = EC_POINT_point2oct(
             group, pub_point, POINT_CONVERSION_UNCOMPRESSED,
-            (uint8_t*)pub_key_bytes, pub_key_len, NULL) == (size_t)pub_key_len;
-    (*env)->ReleasePrimitiveArrayCritical(
-            env, pubKeyOut, pub_key_bytes, encode_pub_key_ok ? 0 : JNI_ABORT);
+            pub_key_buf, pub_key_len, NULL) == (size_t)pub_key_len;
+    if (encode_pub_key_ok) {
+        (*env)->SetByteArrayRegion(env, pubKeyOut, 0, pub_key_len, (jbyte*)pub_key_buf);
+    }
+    OPENSSL_free(pub_key_buf);
 
     EC_KEY_free(ec_key);
 
@@ -151,19 +173,38 @@ JNIEXPORT void JNICALL Java_sun_security_ec_NativeSunEC_ecdsaSignDigest
     EC_GROUP *group = NULL;
     BIGNUM *priv_key_bn = NULL;
     ECDSA_SIG *ecdsa_sig = NULL;
-    unsigned char *seed_data = NULL;
-    unsigned char *priv_key_data = NULL;
+    uint8_t *seed_buf = NULL;
+    jsize seed_len = 0;
+    uint8_t *priv_key_buf = NULL;
+    jsize priv_key_len = 0;
     unsigned char *digest_data = NULL;
     unsigned char *sig_out_buf = NULL;
 
+    if (privKey == NULL || digest == NULL || signatureOut == NULL) {
+        sunec_throw(env, NULL_POINTER_EXCEPTION,
+                "Private key, digest and signature output must not be null");
+        goto cleanup;
+    }
+
     if (seed != NULL) {
-        jsize seed_len = (*env)->GetArrayLength(env, seed);
-        seed_data = (unsigned char *) (*env)->GetByteArrayElements(env, seed, NULL);
-        if (!seed_data || seed_len < 32) {
+        seed_len = (*env)->GetArrayLength(env, seed);
+        if (seed_len < 32) {
             sunec_throw(env, INVALID_ALGO_PARAM_EXCEPTION, "Seed must be at least 32 bytes");
             goto cleanup;
         }
-        RAND_seed(seed_data, seed_len);
+        // Copy the seed into a native buffer (scrubbed with OPENSSL_clear_free)
+        // rather than cleansing the array returned by GetByteArrayElements,
+        // which may alias the Java heap.
+        seed_buf = OPENSSL_malloc(seed_len);
+        if (!seed_buf) {
+            sunec_throw(env, PROVIDER_EXCEPTION, "Memory allocation failed");
+            goto cleanup;
+        }
+        (*env)->GetByteArrayRegion(env, seed, 0, seed_len, (jbyte*)seed_buf);
+        if ((*env)->ExceptionCheck(env)) {
+            goto cleanup;
+        }
+        RAND_seed(seed_buf, seed_len);
     }
 
     group = EC_GROUP_new_by_curve_name(curveNID);
@@ -174,9 +215,24 @@ JNIEXPORT void JNICALL Java_sun_security_ec_NativeSunEC_ecdsaSignDigest
     const int order_bits = EC_GROUP_order_bits(group);
     const int key_size = (order_bits + 7) / 8;
 
-    jsize priv_key_len = (*env)->GetArrayLength(env, privKey);
-    priv_key_data = (unsigned char *)(*env)->GetByteArrayElements(env, privKey, NULL);
-    priv_key_bn = BN_bin2bn(priv_key_data, priv_key_len, NULL);
+    // Copy the private key into a native buffer (scrubbed with
+    // OPENSSL_clear_free) rather than cleansing the JNI array, which may alias
+    // the Java heap.
+    priv_key_len = (*env)->GetArrayLength(env, privKey);
+    if (priv_key_len <= 0) {
+        sunec_throw(env, INVALID_KEY_EXCEPTION, "Invalid private key");
+        goto cleanup;
+    }
+    priv_key_buf = OPENSSL_malloc(priv_key_len);
+    if (!priv_key_buf) {
+        sunec_throw(env, PROVIDER_EXCEPTION, "Memory allocation failed");
+        goto cleanup;
+    }
+    (*env)->GetByteArrayRegion(env, privKey, 0, priv_key_len, (jbyte*)priv_key_buf);
+    if ((*env)->ExceptionCheck(env)) {
+        goto cleanup;
+    }
+    priv_key_bn = BN_bin2bn(priv_key_buf, priv_key_len, NULL);
     if (priv_key_len != key_size || !priv_key_bn || BN_is_zero(priv_key_bn)) {
         sunec_throw(env, INVALID_KEY_EXCEPTION, "Invalid private key");
         goto cleanup;
@@ -231,11 +287,11 @@ cleanup:
     if (ecdsa_sig) {
         ECDSA_SIG_free(ecdsa_sig);
     }
-    if (seed_data) {
-        (*env)->ReleaseByteArrayElements(env, seed, (jbyte *)seed_data, JNI_ABORT);
+    if (seed_buf) {
+        OPENSSL_clear_free(seed_buf, seed_len);
     }
-    if (priv_key_data) {
-        (*env)->ReleaseByteArrayElements(env, privKey, (jbyte *)priv_key_data, JNI_ABORT);
+    if (priv_key_buf) {
+        OPENSSL_clear_free(priv_key_buf, priv_key_len);
     }
     if (digest_data) {
         (*env)->ReleaseByteArrayElements(env, digest, (jbyte *)digest_data, JNI_ABORT);
@@ -342,11 +398,19 @@ JNIEXPORT void JNICALL Java_sun_security_ec_NativeSunEC_ecdhDeriveKey
    jbyteArray privKey, jbyteArray peerPubKey, jbyteArray sharedKeyOut) {
     EC_KEY *ec_key = NULL;
     EC_GROUP *group = NULL;
-    jbyte *priv_key_data = NULL;
+    uint8_t *priv_key_buf = NULL;
+    int priv_key_len = 0;
     BIGNUM *priv_key_bn = NULL;
     jbyte *peer_pub_key_data = NULL;
     EC_POINT *peer_pub_point = NULL;
-    jbyte *shared_key_buf = NULL;
+    uint8_t *shared_key_buf = NULL;
+    int shared_key_size = 0;
+
+    if (privKey == NULL || peerPubKey == NULL || sharedKeyOut == NULL) {
+        sunec_throw(env, NULL_POINTER_EXCEPTION,
+                "Private key, peer public key and shared key output must not be null");
+        goto cleanup;
+    }
 
     group = EC_GROUP_new_by_curve_name(curveNID);
     if (!group) {
@@ -357,7 +421,7 @@ JNIEXPORT void JNICALL Java_sun_security_ec_NativeSunEC_ecdhDeriveKey
     int order_bits = EC_GROUP_order_bits(group);
     int key_size = (order_bits + 7) / 8;
 
-    int priv_key_len = (*env)->GetArrayLength(env, privKey);
+    priv_key_len = (*env)->GetArrayLength(env, privKey);
     if (priv_key_len != key_size) {
         sunec_throw(env, INVALID_KEY_EXCEPTION, "Invalid private key length");
         goto cleanup;
@@ -369,8 +433,19 @@ JNIEXPORT void JNICALL Java_sun_security_ec_NativeSunEC_ecdhDeriveKey
         goto cleanup;
     }
 
-    priv_key_data = (*env)->GetByteArrayElements(env, privKey, NULL);
-    priv_key_bn = BN_bin2bn((unsigned char *)priv_key_data, priv_key_len, NULL);
+    // Copy the private key into a native buffer (scrubbed with
+    // OPENSSL_clear_free) rather than cleansing the JNI array, which may alias
+    // the Java heap.
+    priv_key_buf = OPENSSL_malloc(priv_key_len);
+    if (!priv_key_buf) {
+        sunec_throw(env, PROVIDER_EXCEPTION, "Memory allocation failed");
+        goto cleanup;
+    }
+    (*env)->GetByteArrayRegion(env, privKey, 0, priv_key_len, (jbyte*)priv_key_buf);
+    if ((*env)->ExceptionCheck(env)) {
+        goto cleanup;
+    }
+    priv_key_bn = BN_bin2bn(priv_key_buf, priv_key_len, NULL);
     if (!priv_key_bn) {
         sunec_throw(env, INVALID_KEY_EXCEPTION, "Empty private key");
         goto cleanup;
@@ -396,21 +471,31 @@ JNIEXPORT void JNICALL Java_sun_security_ec_NativeSunEC_ecdhDeriveKey
         goto cleanup;
     }
 
-    shared_key_buf = (*env)->GetByteArrayElements(env, sharedKeyOut, NULL);
     if ((*env)->GetArrayLength(env, sharedKeyOut) != key_size) {
         sunec_throw(env, ILLEGAL_STATE_EXCEPTION, "Shared key buffer size mismatch");
         goto cleanup;
     }
 
-    int actual_shared_key_len = ECDH_compute_key(shared_key_buf, key_size, peer_pub_point, ec_key, NULL);
+    // Derive into a native buffer, copy the result out to the Java array, then
+    // scrub the native buffer: the shared secret must not linger in freed
+    // native memory.
+    shared_key_size = key_size;
+    shared_key_buf = OPENSSL_malloc(shared_key_size);
+    if (!shared_key_buf) {
+        sunec_throw(env, PROVIDER_EXCEPTION, "Memory allocation failed");
+        goto cleanup;
+    }
+
+    int actual_shared_key_len = ECDH_compute_key(shared_key_buf, shared_key_size, peer_pub_point, ec_key, NULL);
     if (actual_shared_key_len != key_size) {
         sunec_throw(env, INVALID_KEY_EXCEPTION, "Derive key failed");
         goto cleanup;
     }
+    (*env)->SetByteArrayRegion(env, sharedKeyOut, 0, shared_key_size, (jbyte*)shared_key_buf);
 
 cleanup:
     if (shared_key_buf) {
-        (*env)->ReleaseByteArrayElements(env, sharedKeyOut, (jbyte *)shared_key_buf, 0);
+        OPENSSL_clear_free(shared_key_buf, shared_key_size);
     }
     if (peer_pub_point) {
         EC_POINT_free(peer_pub_point);
@@ -427,7 +512,7 @@ cleanup:
     if (peer_pub_key_data) {
         (*env)->ReleaseByteArrayElements(env, peerPubKey, peer_pub_key_data, JNI_ABORT);
     }
-    if (priv_key_data) {
-        (*env)->ReleaseByteArrayElements(env, privKey, priv_key_data, JNI_ABORT);
+    if (priv_key_buf) {
+        OPENSSL_clear_free(priv_key_buf, priv_key_len);
     }
 }
