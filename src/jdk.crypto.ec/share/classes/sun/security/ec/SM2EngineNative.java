@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022, 2024, Tencent. All rights reserved.
+ * Copyright (C) 2022, 2026, Tencent. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify
@@ -25,6 +25,7 @@ import sun.security.util.ECUtil;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import java.security.spec.SM2ParameterSpec;
+import java.util.Arrays;
 
 final class SM2EngineNative extends SM2Engine {
 
@@ -38,6 +39,10 @@ final class SM2EngineNative extends SM2Engine {
     byte[] decrypt(byte[] input, int inputOffset, int inputLen)
             throws IllegalBlockSizeException, BadPaddingException {
         byte[] privKey = privateKey.getS().toByteArray();
-        return NativeSunEC.sm2Decrypt(privKey, input, inputOffset, inputLen);
+        try {
+            return NativeSunEC.sm2Decrypt(privKey, input, inputOffset, inputLen);
+        } finally {
+            Arrays.fill(privKey, (byte) 0);
+        }
     }
 }

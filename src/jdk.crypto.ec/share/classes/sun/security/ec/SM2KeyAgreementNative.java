@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022, 2025, Tencent. All rights reserved.
+ * Copyright (C) 2022, 2026, Tencent. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify
@@ -30,6 +30,7 @@ import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.ECPublicKey;
 import java.security.spec.AlgorithmParameterSpec;
 import java.security.spec.SM2KeyAgreementParamSpec;
+import java.util.Arrays;
 
 import static java.math.BigInteger.ZERO;
 import static java.security.spec.SM2ParameterSpec.*;
@@ -115,16 +116,26 @@ public final class SM2KeyAgreementNative extends KeyAgreementSpi {
     }
 
     private byte[] deriveKeyImplNative() {
-        return NativeSunEC.sm2DeriveKey(
-                new SM2PrivateKey(paramSpec.privateKey()).getEncoded(),
-                new SM2PublicKey(paramSpec.publicKey()).getEncoded(),
-                ephemeralPrivateKey.getEncoded(),
-                paramSpec.id(),
-                new SM2PublicKey(paramSpec.peerPublicKey()).getEncoded(),
-                peerEphemeralPublicKey.getEncoded(),
-                paramSpec.peerId(),
-                paramSpec.isInitiator(),
-                paramSpec.sharedKeyLength());
+        byte[] privKey = new SM2PrivateKey(paramSpec.privateKey()).getEncoded();
+        byte[] ePrivKey = null;
+        try {
+            ePrivKey = ephemeralPrivateKey.getEncoded();
+            return NativeSunEC.sm2DeriveKey(
+                    privKey,
+                    new SM2PublicKey(paramSpec.publicKey()).getEncoded(),
+                    ePrivKey,
+                    paramSpec.id(),
+                    new SM2PublicKey(paramSpec.peerPublicKey()).getEncoded(),
+                    peerEphemeralPublicKey.getEncoded(),
+                    paramSpec.peerId(),
+                    paramSpec.isInitiator(),
+                    paramSpec.sharedKeyLength());
+        } finally {
+            Arrays.fill(privKey, (byte) 0);
+            if (ePrivKey != null) {
+                Arrays.fill(ePrivKey, (byte) 0);
+            }
+        }
     }
 
     @Override
@@ -137,8 +148,12 @@ public final class SM2KeyAgreementNative extends KeyAgreementSpi {
         }
 
         byte[] secret = engineGenerateSecret();
-        System.arraycopy(secret, 0, sharedSecret, offset, secret.length);
-        return secret.length;
+        try {
+            System.arraycopy(secret, 0, sharedSecret, offset, secret.length);
+            return secret.length;
+        } finally {
+            Arrays.fill(secret, (byte) 0);
+        }
     }
 
     @Override
