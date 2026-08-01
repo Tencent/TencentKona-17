@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022, 2023, Tencent. All rights reserved.
+ * Copyright (C) 2022, 2026, Tencent. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify
@@ -28,6 +28,7 @@ import java.security.interfaces.ECPublicKey;
 import java.security.spec.AlgorithmParameterSpec;
 import java.security.spec.SM2ParameterSpec;
 import java.security.spec.SM2SignatureParameterSpec;
+import java.util.Arrays;
 
 import static java.math.BigInteger.ONE;
 import static java.math.BigInteger.ZERO;
@@ -142,11 +143,16 @@ public class SM2SignatureNative extends SignatureSpi {
             id = DEFAULT_ID.clone();
         }
 
-        byte[] sign = NativeSunEC.sm2Sign(privateKey.getEncoded(),
-                publicKey == null ? null : publicKey.getEncoded(),
-                id, buffer.toByteArray());
-        buffer.reset();
-        return sign;
+        byte[] encodedPrivKey = privateKey.getEncoded();
+        try {
+            byte[] sign = NativeSunEC.sm2Sign(encodedPrivKey,
+                    publicKey == null ? null : publicKey.getEncoded(),
+                    id, buffer.toByteArray());
+            buffer.reset();
+            return sign;
+        } finally {
+            Arrays.fill(encodedPrivKey, (byte) 0);
+        }
     }
 
     private static byte[] combineKey(byte[] priKey, byte[] pubKey) {
