@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025, Tencent. All rights reserved.
+ * Copyright (C) 2025, 2026, Tencent. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -20,7 +20,6 @@
 // Need to use the deprecated lower EC functions
 #define OPENSSL_SUPPRESS_DEPRECATED
 
-#include <math.h>
 #include <stdbool.h>
 
 #include <openssl/ec.h>
@@ -150,10 +149,12 @@ JNIEXPORT jbyteArray JNICALL Java_sun_security_ec_NativeSunEC_sm2Decrypt(
   jbyteArray ciphertext, jint ciphertextOffset, jint ciphertextLength) {
     EVP_PKEY *pkey = NULL;
     EVP_PKEY_CTX *ctx = NULL;
-    size_t plaintext_len;
+    size_t plaintext_len = 0;
+    size_t plaintext_buf_len = 0;
     unsigned char *plaintext_buf = NULL;
     jbyteArray plaintext = NULL;
-    jbyte *priv_key_bytes = NULL;
+    uint8_t *priv_key_buf = NULL;
+    int priv_key_len = 0;
     jbyte *ciphertext_bytes = NULL;
     EC_KEY *ec_key = NULL;
     BIGNUM *priv_bn = NULL;
@@ -164,15 +165,32 @@ JNIEXPORT jbyteArray JNICALL Java_sun_security_ec_NativeSunEC_sm2Decrypt(
         goto cleanup;
     }
 
-    priv_key_bytes = (*env)->GetByteArrayElements(env, privKey, NULL);
-    ciphertext_bytes = (*env)->GetByteArrayElements(env, ciphertext, NULL);
-    if (!priv_key_bytes || !ciphertext_bytes) {
-        sunec_throw(env, NULL_POINTER_EXCEPTION, "Failed to access array elements");
+    if (privKey == NULL || ciphertext == NULL) {
+        sunec_throw(env, NULL_POINTER_EXCEPTION, "Private key or ciphertext must not be null");
         goto cleanup;
     }
 
-    int priv_key_len = (*env)->GetArrayLength(env, privKey);
-    priv_bn = BN_bin2bn((unsigned char*)priv_key_bytes, priv_key_len, NULL);
+    // Copy the private key into a native buffer instead of cleansing the array
+    // returned by GetByteArrayElements, which may be a direct pointer to the
+    // Java heap; zeroing that would wipe the caller's key. The buffer is
+    // scrubbed via OPENSSL_clear_free in the cleanup block.
+    priv_key_len = (*env)->GetArrayLength(env, privKey);
+    ciphertext_bytes = (*env)->GetByteArrayElements(env, ciphertext, NULL);
+    if (priv_key_len <= 0 || !ciphertext_bytes) {
+        sunec_throw(env, NULL_POINTER_EXCEPTION, "Failed to access array elements");
+        goto cleanup;
+    }
+    priv_key_buf = OPENSSL_malloc(priv_key_len);
+    if (!priv_key_buf) {
+        sunec_throw(env, PROVIDER_EXCEPTION, "Memory allocation failed");
+        goto cleanup;
+    }
+    (*env)->GetByteArrayRegion(env, privKey, 0, priv_key_len, (jbyte*)priv_key_buf);
+    if ((*env)->ExceptionCheck(env)) {
+        goto cleanup;
+    }
+
+    priv_bn = BN_bin2bn(priv_key_buf, priv_key_len, NULL);
     if (!priv_bn) {
         sunec_throw(env, PROVIDER_EXCEPTION, "Failed to create BIGNUM from private key");
         goto cleanup;
@@ -211,7 +229,12 @@ JNIEXPORT jbyteArray JNICALL Java_sun_security_ec_NativeSunEC_sm2Decrypt(
         goto cleanup;
     }
 
-    plaintext_buf = OPENSSL_malloc(plaintext_len);
+    // plaintext_len is an in/out parameter to EVP_PKEY_decrypt; record the
+    // allocation size separately so cleanup always zeroes/frees the exact
+    // number of bytes that were allocated, regardless of how the second
+    // decrypt call leaves plaintext_len on failure.
+    plaintext_buf_len = plaintext_len;
+    plaintext_buf = OPENSSL_malloc(plaintext_buf_len);
     if (!plaintext_buf) {
         sunec_throw(env, PROVIDER_EXCEPTION, "Memory allocation failed");
         goto cleanup;
@@ -232,10 +255,10 @@ JNIEXPORT jbyteArray JNICALL Java_sun_security_ec_NativeSunEC_sm2Decrypt(
 
 cleanup:
     if (plaintext_buf) {
-        OPENSSL_free(plaintext_buf);
+        OPENSSL_clear_free(plaintext_buf, plaintext_buf_len);
     }
     if (priv_bn) {
-        BN_free(priv_bn);
+        BN_clear_free(priv_bn);
     }
     if (ec_key) {
         EC_KEY_free(ec_key);
@@ -246,8 +269,9 @@ cleanup:
     if (pkey) {
         EVP_PKEY_free(pkey);
     }
-    if (priv_key_bytes) {
-        (*env)->ReleaseByteArrayElements(env, privKey, priv_key_bytes, JNI_ABORT);
+    if (priv_key_buf) {
+        // Scrub the native copy of the private key before freeing it.
+        OPENSSL_clear_free(priv_key_buf, priv_key_len);
     }
     if (ciphertext_bytes) {
         (*env)->ReleaseByteArrayElements(env, ciphertext, ciphertext_bytes, JNI_ABORT);
@@ -269,21 +293,43 @@ JNIEXPORT jbyteArray JNICALL Java_sun_security_ec_NativeSunEC_sm2Sign(
     unsigned char *sig_buf = NULL;
     jbyteArray sig = NULL;
 
-    jbyte *priv_key_bytes = NULL;
+    uint8_t *priv_key_buf = NULL;
+    jsize priv_key_len = 0;
     jbyte *pub_key_bytes = NULL;
     jbyte *id_bytes = NULL;
     jbyte *msg_bytes = NULL;
 
-    priv_key_bytes = (*env)->GetByteArrayElements(env, privKey, NULL);
-    id_bytes = (*env)->GetByteArrayElements(env, id, NULL);
-    msg_bytes = (*env)->GetByteArrayElements(env, message, NULL);
-
-    if (!priv_key_bytes || !id_bytes || !msg_bytes) {
+    if (privKey == NULL || id == NULL || message == NULL) {
         sunec_throw(env, NULL_POINTER_EXCEPTION, "Private key, ID or message cannot be null");
         goto cleanup;
     }
 
-    jsize priv_key_len = (*env)->GetArrayLength(env, privKey);
+    id_bytes = (*env)->GetByteArrayElements(env, id, NULL);
+    msg_bytes = (*env)->GetByteArrayElements(env, message, NULL);
+
+    if (!id_bytes || !msg_bytes) {
+        sunec_throw(env, NULL_POINTER_EXCEPTION, "Private key, ID or message cannot be null");
+        goto cleanup;
+    }
+
+    // Copy the private key into a native buffer instead of cleansing the array
+    // returned by GetByteArrayElements, which may alias the Java heap; the
+    // buffer is scrubbed via OPENSSL_clear_free in the cleanup block.
+    priv_key_len = (*env)->GetArrayLength(env, privKey);
+    if (priv_key_len <= 0) {
+        sunec_throw(env, NULL_POINTER_EXCEPTION, "Private key, ID or message cannot be null");
+        goto cleanup;
+    }
+    priv_key_buf = OPENSSL_malloc(priv_key_len);
+    if (!priv_key_buf) {
+        sunec_throw(env, PROVIDER_EXCEPTION, "Memory allocation failed");
+        goto cleanup;
+    }
+    (*env)->GetByteArrayRegion(env, privKey, 0, priv_key_len, (jbyte*)priv_key_buf);
+    if ((*env)->ExceptionCheck(env)) {
+        goto cleanup;
+    }
+
     jsize id_len = (*env)->GetArrayLength(env, id);
     jsize msg_len = (*env)->GetArrayLength(env, message);
 
@@ -293,7 +339,7 @@ JNIEXPORT jbyteArray JNICALL Java_sun_security_ec_NativeSunEC_sm2Sign(
         goto cleanup;
     }
 
-    priv_bn = BN_bin2bn((unsigned char*)priv_key_bytes, priv_key_len, NULL);
+    priv_bn = BN_bin2bn(priv_key_buf, priv_key_len, NULL);
     if (!priv_bn) {
         sunec_throw(env, PROVIDER_EXCEPTION, "Failed to create private key BIGNUM");
         goto cleanup;
@@ -420,14 +466,15 @@ cleanup:
         EC_KEY_free(ec_key);
     }
     if (priv_bn) {
-        BN_free(priv_bn);
+        BN_clear_free(priv_bn);
     }
     if (pub_point) {
         EC_POINT_free(pub_point);
     }
 
-    if (priv_key_bytes) {
-        (*env)->ReleaseByteArrayElements(env, privKey, priv_key_bytes, JNI_ABORT);
+    if (priv_key_buf) {
+        // Scrub the native copy of the private key before freeing it.
+        OPENSSL_clear_free(priv_key_buf, priv_key_len);
     }
     if (pub_key_bytes) {
         (*env)->ReleaseByteArrayElements(env, pubKey, pub_key_bytes, JNI_ABORT);
@@ -715,10 +762,12 @@ EVP_MD_CTX* sm3_create_ctx() {
 
     const EVP_MD* md = EVP_sm3();
     if (md == NULL) {
+        EVP_MD_CTX_free(ctx);
         return NULL;
     }
 
     if (!EVP_DigestInit_ex(ctx, md, NULL)) {
+        EVP_MD_CTX_free(ctx);
         return NULL;
     }
 
@@ -745,11 +794,14 @@ SM2_KEYEX_CTX* sm2_create_keyex_ctx() {
 
     BN_CTX* bn_ctx = BN_CTX_new();
     if (bn_ctx == NULL) {
+        EVP_MD_CTX_free(sm3_ctx);
         return NULL;
     }
 
     SM2_KEYEX_CTX* ctx = OPENSSL_malloc(sizeof(SM2_KEYEX_CTX));
     if (ctx == NULL) {
+        BN_CTX_free(bn_ctx);
+        EVP_MD_CTX_free(sm3_ctx);
         return NULL;
     }
     ctx->sm3_ctx = sm3_ctx;
@@ -823,7 +875,7 @@ int z(uint8_t* out, SM2_KEYEX_CTX* ctx,
 
     unsigned int len = 0;
     if (!EVP_DigestFinal_ex(ctx->sm3_ctx, out, &len) || len != SM3_DIGEST_LEN) {
-        ret = OPENSSL_FAILURE;
+        goto cleanup;
     }
 
     if (!sm3_reset(ctx->sm3_ctx)) {
@@ -845,25 +897,38 @@ cleanup:
 int kdf(uint8_t* key_out, const int key_len, EVP_MD_CTX* sm3_ctx, const uint8_t* in, size_t in_len) {
     int remainder = key_len % SM3_DIGEST_LEN;
     int count = key_len / SM3_DIGEST_LEN + (remainder == 0 ? 0 : 1);
+    uint8_t digest[SM3_DIGEST_LEN];
+    int ret = OPENSSL_FAILURE;
+
+    // Start from a clean digest state instead of relying on the caller to
+    // leave sm3_ctx freshly initialized. sm3_reset is safe on an already-
+    // initialized SM3 context, so this keeps kdf self-contained.
+    if (!sm3_reset(sm3_ctx)) {
+        goto cleanup;
+    }
 
     for (int i = 1; i <= count; i++) {
-        uint8_t digest[SM3_DIGEST_LEN];
         if (!EVP_DigestUpdate(sm3_ctx, in, in_len)) {
-            return OPENSSL_FAILURE;
+            goto cleanup;
         }
 
         uint8_t counter[4] = { (i >> 24) & 0xFF, (i >> 16) & 0xFF, (i >> 8) & 0xFF, i & 0xFF };
         if (!EVP_DigestUpdate(sm3_ctx, counter, 4) ||
             !EVP_DigestFinal_ex(sm3_ctx, digest, NULL) ||
             !sm3_reset(sm3_ctx)) {
-            return OPENSSL_FAILURE;
+            goto cleanup;
         }
 
         int length = (i == count && remainder != 0) ? remainder : SM3_DIGEST_LEN;
         memcpy(key_out + (i - 1) * SM3_DIGEST_LEN, digest, length);
     }
 
-    return OPENSSL_SUCCESS;
+    ret = OPENSSL_SUCCESS;
+
+cleanup:
+    OPENSSL_cleanse(digest, sizeof(digest));
+
+    return ret;
 }
 
 void combine(uint8_t* combined_out,
@@ -910,6 +975,8 @@ int sm2_derive_key(uint8_t* key_out, int key_len,
     uint8_t* zA = NULL;
     uint8_t* zB = NULL;
     uint8_t* combined = NULL;
+    uint8_t vX[32] = {0};
+    uint8_t vY[32] = {0};
     int ret = OPENSSL_FAILURE;
 
     if (order == NULL || order_minus_one == NULL || two_pow_w == NULL || two_pow_w_sub_one == NULL ||
@@ -926,7 +993,8 @@ int sm2_derive_key(uint8_t* key_out, int key_len,
     }
 
     int bit_length = BN_num_bits(order_minus_one);
-    int w = (int)ceil((double)bit_length / 2) - 1;
+    // w = ceil(bit_length / 2) - 1, computed with integer arithmetic.
+    int w = (bit_length + 1) / 2 - 1;
 
     if (!BN_lshift(two_pow_w, BN_value_one(), w) ||
         !BN_sub(two_pow_w_sub_one, two_pow_w, BN_value_one())) {
@@ -987,8 +1055,6 @@ int sm2_derive_key(uint8_t* key_out, int key_len,
         goto cleanup;
     }
 
-    uint8_t vX[32] = {0};
-    uint8_t vY[32] = {0};
     if (!BN_bn2bin(vX_bn, vX + (32 - vX_len)) ||
         !BN_bn2bin(vY_bn, vY + (32 - vY_len))) {
         goto cleanup;
@@ -1015,22 +1081,30 @@ int sm2_derive_key(uint8_t* key_out, int key_len,
     ret = OPENSSL_SUCCESS;
 
 cleanup:
-    BN_free(order);
-    BN_free(order_minus_one);
-    BN_free(two_pow_w);
-    BN_free(two_pow_w_sub_one);
-    BN_free(x1);
-    BN_free(tA);
-    BN_free(x2);
-    BN_free(cofactor);
-    BN_free(vX_bn);
-    BN_free(vY_bn);
+    BN_clear_free(order);
+    BN_clear_free(order_minus_one);
+    BN_clear_free(two_pow_w);
+    BN_clear_free(two_pow_w_sub_one);
+    BN_clear_free(x1);
+    BN_clear_free(tA);
+    BN_clear_free(x2);
+    BN_clear_free(cofactor);
+    BN_clear_free(vX_bn);
+    BN_clear_free(vY_bn);
     EC_POINT_free(rA_p);
     EC_POINT_free(interim_p);
     EC_POINT_free(u_p);
-    OPENSSL_free(zA);
-    OPENSSL_free(zB);
-    OPENSSL_free(combined);
+    if (zA) {
+        OPENSSL_clear_free(zA, 32);
+    }
+    if (zB) {
+        OPENSSL_clear_free(zB, 32);
+    }
+    if (combined) {
+        OPENSSL_clear_free(combined, 128);
+    }
+    OPENSSL_cleanse(vX, sizeof(vX));
+    OPENSSL_cleanse(vY, sizeof(vY));
 
     return ret;
 }
@@ -1042,6 +1116,8 @@ BIGNUM* sm2_pri_key(const uint8_t* pri_key_bytes) {
     }
 
     if (BN_bin2bn(pri_key_bytes, 32, pri_key) == NULL) {
+        BN_clear_free(pri_key);
+
         return NULL;
     }
 
@@ -1057,6 +1133,8 @@ EC_POINT* sm2_pub_key(const uint8_t* pub_key_bytes, const size_t pub_key_len) {
     }
 
     if(!EC_POINT_oct2point(group, pub_key, pub_key_bytes, pub_key_len, NULL)) {
+        EC_POINT_free(pub_key);
+
         return NULL;
     }
 
@@ -1118,9 +1196,9 @@ JNIEXPORT jbyteArray JNICALL Java_sun_security_ec_NativeSunEC_sm2DeriveKey(
         return NULL;
     }
 
-    jbyte* pri_key_bytes = NULL;
+    uint8_t* pri_key_buf = NULL;
     jbyte* pub_key_bytes = NULL;
-    jbyte* e_pri_key_bytes = NULL;
+    uint8_t* e_pri_key_buf = NULL;
     jbyte* id_bytes = NULL;
     jbyte* peer_pub_key_bytes = NULL;
     jbyte* peer_e_pub_key_bytes = NULL;
@@ -1134,14 +1212,28 @@ JNIEXPORT jbyteArray JNICALL Java_sun_security_ec_NativeSunEC_sm2DeriveKey(
     uint8_t* shared_key_buf = NULL;
     jbyteArray shared_key_bytes = NULL;
 
+    if (priKey == NULL || pubKey == NULL || ePriKey == NULL || id == NULL
+            || peerPubKey == NULL || peerEPubKey == NULL || peerId == NULL) {
+        sunec_throw(env, NULL_POINTER_EXCEPTION,
+                "SM2 key agreement inputs must not be null");
+        goto cleanup;
+    }
+
     int pri_key_len = (*env)->GetArrayLength(env, priKey);
     if (pri_key_len != SM2_PRI_KEY_LEN) {
         sunec_throw(env, ILLEGAL_STATE_EXCEPTION, "Wrong SM2 private key length");
         goto cleanup;
     }
-    pri_key_bytes = (*env)->GetByteArrayElements(env, priKey, NULL);
-    if (pri_key_bytes == NULL) {
-        sunec_throw(env, ILLEGAL_STATE_EXCEPTION, "Failed to get SM2 private key");
+    // Copy the private key into a native buffer instead of cleansing the array
+    // returned by GetByteArrayElements, which may alias the Java heap; the
+    // buffer is scrubbed via OPENSSL_clear_free in the cleanup block.
+    pri_key_buf = OPENSSL_malloc(pri_key_len);
+    if (pri_key_buf == NULL) {
+        sunec_throw(env, PROVIDER_EXCEPTION, "Memory allocation failed");
+        goto cleanup;
+    }
+    (*env)->GetByteArrayRegion(env, priKey, 0, pri_key_len, (jbyte*)pri_key_buf);
+    if ((*env)->ExceptionCheck(env)) {
         goto cleanup;
     }
 
@@ -1161,9 +1253,15 @@ JNIEXPORT jbyteArray JNICALL Java_sun_security_ec_NativeSunEC_sm2DeriveKey(
         sunec_throw(env, ILLEGAL_STATE_EXCEPTION, "Wrong SM2 ephemeral private key length");
         goto cleanup;
     }
-    e_pri_key_bytes = (*env)->GetByteArrayElements(env, ePriKey, NULL);
-    if (e_pri_key_bytes == NULL) {
-        sunec_throw(env, ILLEGAL_STATE_EXCEPTION, "Failed to get SM2 ephemeral private key");
+    // Copy the ephemeral private key into a native buffer (see priKey above);
+    // scrubbed via OPENSSL_clear_free in the cleanup block.
+    e_pri_key_buf = OPENSSL_malloc(e_pri_key_len);
+    if (e_pri_key_buf == NULL) {
+        sunec_throw(env, PROVIDER_EXCEPTION, "Memory allocation failed");
+        goto cleanup;
+    }
+    (*env)->GetByteArrayRegion(env, ePriKey, 0, e_pri_key_len, (jbyte*)e_pri_key_buf);
+    if ((*env)->ExceptionCheck(env)) {
         goto cleanup;
     }
 
@@ -1219,7 +1317,7 @@ JNIEXPORT jbyteArray JNICALL Java_sun_security_ec_NativeSunEC_sm2DeriveKey(
         goto cleanup;
     }
 
-    pri_key = sm2_pri_key((const uint8_t *)pri_key_bytes);
+    pri_key = sm2_pri_key(pri_key_buf);
     if (pri_key == NULL) {
         sunec_throw(env, PROVIDER_EXCEPTION, "Failed to create BIGNUM from private key");
         goto cleanup;
@@ -1231,7 +1329,7 @@ JNIEXPORT jbyteArray JNICALL Java_sun_security_ec_NativeSunEC_sm2DeriveKey(
         goto cleanup;
     }
 
-    e_pri_key = sm2_pri_key((const uint8_t *)e_pri_key_bytes);
+    e_pri_key = sm2_pri_key(e_pri_key_buf);
     if (e_pri_key == NULL) {
         sunec_throw(env, PROVIDER_EXCEPTION, "Failed to create BIGNUM from ephemeral private key");
         goto cleanup;
@@ -1283,14 +1381,16 @@ JNIEXPORT jbyteArray JNICALL Java_sun_security_ec_NativeSunEC_sm2DeriveKey(
     (*env)->SetByteArrayRegion(env, shared_key_bytes, 0, shared_key_len, (jbyte*)shared_key_buf);
 
 cleanup:
-    if (pri_key_bytes != NULL) {
-        (*env)->ReleaseByteArrayElements(env, priKey, pri_key_bytes, JNI_ABORT);
+    if (pri_key_buf != NULL) {
+        // Scrub the native copy of the private key before freeing it.
+        OPENSSL_clear_free(pri_key_buf, SM2_PRI_KEY_LEN);
     }
     if (pub_key_bytes != NULL) {
         (*env)->ReleaseByteArrayElements(env, pubKey, pub_key_bytes, JNI_ABORT);
     }
-    if (e_pri_key_bytes != NULL) {
-        (*env)->ReleaseByteArrayElements(env, ePriKey, e_pri_key_bytes, JNI_ABORT);
+    if (e_pri_key_buf != NULL) {
+        // Scrub the native copy of the ephemeral private key before freeing it.
+        OPENSSL_clear_free(e_pri_key_buf, SM2_PRI_KEY_LEN);
     }
     if (id_bytes != NULL) {
         (*env)->ReleaseByteArrayElements(env, id, id_bytes, JNI_ABORT);
@@ -1304,13 +1404,15 @@ cleanup:
     if (peer_id_bytes != NULL) {
         (*env)->ReleaseByteArrayElements(env, peerId, peer_id_bytes, JNI_ABORT);
     }
-    BN_free(pri_key);
+    BN_clear_free(pri_key);
     EC_POINT_free(pub_key);
-    BN_free(e_pri_key);
+    BN_clear_free(e_pri_key);
     EC_POINT_free(peer_pub_key);
     EC_POINT_free(peer_e_pub_key);
     OPENSSL_free(params);
-    OPENSSL_free(shared_key_buf);
+    if (shared_key_buf) {
+        OPENSSL_clear_free(shared_key_buf, shared_key_len);
+    }
     sm2_free_keyex_ctx(ctx);
 
     return shared_key_bytes;
