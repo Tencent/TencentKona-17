@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023, Tencent. All rights reserved.
+ * Copyright (C) 2023, 2026, Tencent. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify
@@ -35,8 +35,16 @@ final class SMEntries {
               "com.sun.crypto.provider.SM4Cipher$General");
         p.put("Cipher.SM4 SupportedModes", "CBC|CTR|ECB");
         p.put("Cipher.SM4 SupportedPaddings", "NOPADDING|PKCS7PADDING");
-        p.put("Cipher.SM4/GCM/NoPadding",
-              "com.sun.crypto.provider.GaloisCounterMode$SM4");
+        // SM4/GCM is accelerated with OpenSSL (SM4-GCM) only when native
+        // crypto is enabled AND this OpenSSL actually provides SM4-GCM
+        // (3.0+); otherwise the pure-Java GaloisCounterMode is kept.
+        if (NativeSM4.isSM4GCMAvailable()) {
+            p.put("Cipher.SM4/GCM/NoPadding",
+                  "com.sun.crypto.provider.NativeSM4GCMCipher");
+        } else {
+            p.put("Cipher.SM4/GCM/NoPadding",
+                  "com.sun.crypto.provider.GaloisCounterMode$SM4");
+        }
 
         p.put("AlgorithmParameters.SM4", "com.sun.crypto.provider.SM4Parameters");
         p.put("KeyGenerator.SM4", "com.sun.crypto.provider.SM4KeyGenerator");
