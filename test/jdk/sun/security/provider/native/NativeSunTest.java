@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025, Tencent. All rights reserved.
+ * Copyright (C) 2025, 2026, Tencent. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -19,7 +19,7 @@
 
 /*
  * @test
- * @summary The SUN crypto based on OpenSSL.
+ * @summary Native SM3 streaming interface backed by OpenSSL EVP_MD_CTX.
  * @modules java.base/sun.security.provider
  * @library /test/lib /test/jdk/openssl
  * @build java.base/sun.security.provider.NativeSunWrapper NativeSunUtil
@@ -39,56 +39,253 @@ public class NativeSunTest {
 
     private static final HexFormat HEX = HexFormat.of();
 
-    @Test
-    public void testSM3Digest() {
-        checkSM3Digest("", "1ab21d8355cfa17f8e61194831e81a8f22bec8c728fefb747ed035eb5082aa2b");
-        checkSM3Digest("test", "55e12e91650d2fec56ec74e1d3e4ddbfce2ef3a65890c2a19ecf88a307e76a23");
+    // Known-good SM3 digests (GB/T 32905-2016 test vectors).
+    private static final String DIGEST_EMPTY =
+            "1ab21d8355cfa17f8e61194831e81a8f22bec8c728fefb747ed035eb5082aa2b";
+    private static final String DIGEST_TEST =
+            "55e12e91650d2fec56ec74e1d3e4ddbfce2ef3a65890c2a19ecf88a307e76a23";
+
+    // -------------------------------------------------------------------
+    // Helpers
+    // -------------------------------------------------------------------
+
+    private static byte[] digest(byte[] message) {
+        long ctx = NativeSunWrapper.sm3Init();
+        try {
+            NativeSunWrapper.sm3Update(ctx, message, 0, message.length);
+            byte[] out = new byte[32];
+            NativeSunWrapper.sm3DoFinal(ctx, out, 0);
+            return out;
+        } finally {
+            NativeSunWrapper.sm3Free(ctx);
+        }
     }
 
-    private void checkSM3Digest(String message, String expectedDigest) {
-        byte[] actual = new byte[32];
-        NativeSunWrapper.sm3Digest(message.getBytes(StandardCharsets.UTF_8),
-                actual, 0);
-        Assertions.assertEquals(expectedDigest, HEX.formatHex(actual));
+    // -------------------------------------------------------------------
+    // Functional tests
+    // -------------------------------------------------------------------
+
+    @Test
+    public void testOneShotEmpty() {
+        Assertions.assertEquals(DIGEST_EMPTY,
+                HEX.formatHex(digest("".getBytes(StandardCharsets.UTF_8))));
     }
 
     @Test
-    public void runSM3DigestSerially() throws Exception {
-        NativeSunUtil.execTaskSerially(()-> {
-            testSM3Digest();
+    public void testOneShotNonEmpty() {
+        Assertions.assertEquals(DIGEST_TEST,
+                HEX.formatHex(digest("test".getBytes(StandardCharsets.UTF_8))));
+    }
+
+    /** Multiple update calls must produce the same digest as a single one. */
+    @Test
+    public void testMultiUpdate() {
+        byte[] msg = "test".getBytes(StandardCharsets.UTF_8);
+        long ctx = NativeSunWrapper.sm3Init();
+        try {
+            for (byte b : msg) {
+                NativeSunWrapper.sm3Update(ctx, new byte[]{b}, 0, 1);
+            }
+            byte[] out = new byte[32];
+            NativeSunWrapper.sm3DoFinal(ctx, out, 0);
+            Assertions.assertEquals(DIGEST_TEST, HEX.formatHex(out));
+        } finally {
+            NativeSunWrapper.sm3Free(ctx);
+        }
+    }
+
+    /** doFinal resets the context; a second doFinal on the same ctx must
+     *  yield the empty-message digest. */
+    @Test
+    public void testDoFinalResetsCtx() {
+        long ctx = NativeSunWrapper.sm3Init();
+        try {
+            byte[] msg = "test".getBytes(StandardCharsets.UTF_8);
+            NativeSunWrapper.sm3Update(ctx, msg, 0, msg.length);
+            byte[] first = new byte[32];
+            NativeSunWrapper.sm3DoFinal(ctx, first, 0);
+            Assertions.assertEquals(DIGEST_TEST, HEX.formatHex(first));
+
+            // ctx is now reset; no further updates — expect empty-message digest
+            byte[] second = new byte[32];
+            NativeSunWrapper.sm3DoFinal(ctx, second, 0);
+            Assertions.assertEquals(DIGEST_EMPTY, HEX.formatHex(second));
+        } finally {
+            NativeSunWrapper.sm3Free(ctx);
+        }
+    }
+
+    /** sm3Reinit discards partial state; subsequent doFinal yields the
+     *  empty-message digest. */
+    @Test
+    public void testReinit() {
+        long ctx = NativeSunWrapper.sm3Init();
+        try {
+            byte[] msg = "test".getBytes(StandardCharsets.UTF_8);
+            NativeSunWrapper.sm3Update(ctx, msg, 0, msg.length);
+            NativeSunWrapper.sm3Reinit(ctx);  // abort the partial hash
+
+            byte[] out = new byte[32];
+            NativeSunWrapper.sm3DoFinal(ctx, out, 0);
+            Assertions.assertEquals(DIGEST_EMPTY, HEX.formatHex(out));
+        } finally {
+            NativeSunWrapper.sm3Free(ctx);
+        }
+    }
+
+    /** sm3Copy captures mid-computation state; both branches must converge
+     *  on the same final digest. */
+    @Test
+    public void testCopy() {
+        long ctx = NativeSunWrapper.sm3Init();
+        long copy = 0;
+        try {
+            byte[] part1 = "te".getBytes(StandardCharsets.UTF_8);
+            byte[] part2 = "st".getBytes(StandardCharsets.UTF_8);
+            NativeSunWrapper.sm3Update(ctx, part1, 0, part1.length);
+            copy = NativeSunWrapper.sm3Copy(ctx);
+
+            // Finish original ctx
+            NativeSunWrapper.sm3Update(ctx, part2, 0, part2.length);
+            byte[] outOrig = new byte[32];
+            NativeSunWrapper.sm3DoFinal(ctx, outOrig, 0);
+
+            // Finish copy independently
+            NativeSunWrapper.sm3Update(copy, part2, 0, part2.length);
+            byte[] outCopy = new byte[32];
+            NativeSunWrapper.sm3DoFinal(copy, outCopy, 0);
+
+            Assertions.assertEquals(DIGEST_TEST, HEX.formatHex(outOrig));
+            Assertions.assertArrayEquals(outOrig, outCopy);
+        } finally {
+            NativeSunWrapper.sm3Free(ctx);
+            if (copy != 0) NativeSunWrapper.sm3Free(copy);
+        }
+    }
+
+    /** Output offset: the digest must land at the correct position. */
+    @Test
+    public void testOutputOffset() {
+        long ctx = NativeSunWrapper.sm3Init();
+        try {
+            byte[] msg = "test".getBytes(StandardCharsets.UTF_8);
+            NativeSunWrapper.sm3Update(ctx, msg, 0, msg.length);
+            byte[] out = new byte[33];
+            NativeSunWrapper.sm3DoFinal(ctx, out, 1);
+            // First byte must be untouched (zero)
+            Assertions.assertEquals((byte) 0, out[0]);
+            Assertions.assertEquals(DIGEST_TEST,
+                    HEX.formatHex(out, 1, 33));
+        } finally {
+            NativeSunWrapper.sm3Free(ctx);
+        }
+    }
+
+    // -------------------------------------------------------------------
+    // Concurrency tests
+    // -------------------------------------------------------------------
+
+    @Test
+    public void runSerially() throws Exception {
+        NativeSunUtil.execTaskSerially(() -> {
+            testOneShotNonEmpty();
+            testMultiUpdate();
             return null;
         });
     }
 
     @Test
-    public void runSM3DigestParallelly() throws Exception {
-        NativeSunUtil.execTaskParallelly(()-> {
-            testSM3Digest();
+    public void runParallelly() throws Exception {
+        NativeSunUtil.execTaskParallelly(() -> {
+            testOneShotNonEmpty();
+            testMultiUpdate();
             return null;
         });
     }
 
+    // -------------------------------------------------------------------
+    // Negative / bounds tests
+    // -------------------------------------------------------------------
+
     @Test
-    public void testSM3Input() {
-        byte[] smallOut = new byte[32];
-        Assertions.assertThrows(NullPointerException.class,
-                () -> NativeSunWrapper.sm3Digest(null, smallOut, 0));
+    public void testNullInput() {
+        long ctx = NativeSunWrapper.sm3Init();
+        try {
+            Assertions.assertThrows(NullPointerException.class,
+                    () -> NativeSunWrapper.sm3Update(ctx, null, 0, 4));
+        } finally {
+            NativeSunWrapper.sm3Free(ctx);
+        }
     }
 
     @Test
-    public void testSM3SmallOutput() {
-        byte[] smallOut = new byte[31];
-        Assertions.assertThrows(IndexOutOfBoundsException.class,
-                () -> NativeSunWrapper.sm3Digest("".getBytes(), smallOut, 0));
+    public void testNullOutput() {
+        long ctx = NativeSunWrapper.sm3Init();
+        try {
+            Assertions.assertThrows(NullPointerException.class,
+                    () -> NativeSunWrapper.sm3DoFinal(ctx, null, 0));
+        } finally {
+            NativeSunWrapper.sm3Free(ctx);
+        }
     }
 
     @Test
-    public void testSM3BigOutput() {
-        byte[] bigOut = new byte[33];
-        NativeSunWrapper.sm3Digest("test".getBytes(), bigOut, 1);
-        Assertions.assertEquals(
-                // The first byte is 0x00
-                "0055e12e91650d2fec56ec74e1d3e4ddbfce2ef3a65890c2a19ecf88a307e76a23",
-                HEX.formatHex(bigOut));
+    public void testSmallOutput() {
+        long ctx = NativeSunWrapper.sm3Init();
+        try {
+            byte[] smallOut = new byte[31];
+            Assertions.assertThrows(ArrayIndexOutOfBoundsException.class,
+                    () -> NativeSunWrapper.sm3DoFinal(ctx, smallOut, 0));
+        } finally {
+            NativeSunWrapper.sm3Free(ctx);
+        }
+    }
+
+    @Test
+    public void testNegativeInputOffset() {
+        long ctx = NativeSunWrapper.sm3Init();
+        try {
+            byte[] in = "test".getBytes(StandardCharsets.UTF_8);
+            Assertions.assertThrows(ArrayIndexOutOfBoundsException.class,
+                    () -> NativeSunWrapper.sm3Update(ctx, in, -1, in.length));
+        } finally {
+            NativeSunWrapper.sm3Free(ctx);
+        }
+    }
+
+    @Test
+    public void testNegativeInputLength() {
+        long ctx = NativeSunWrapper.sm3Init();
+        try {
+            byte[] in = "test".getBytes(StandardCharsets.UTF_8);
+            Assertions.assertThrows(ArrayIndexOutOfBoundsException.class,
+                    () -> NativeSunWrapper.sm3Update(ctx, in, 0, -1));
+        } finally {
+            NativeSunWrapper.sm3Free(ctx);
+        }
+    }
+
+    @Test
+    public void testInputOffsetPlusLengthOverflow() {
+        long ctx = NativeSunWrapper.sm3Init();
+        try {
+            byte[] in = "test".getBytes(StandardCharsets.UTF_8);
+            Assertions.assertThrows(ArrayIndexOutOfBoundsException.class,
+                    () -> NativeSunWrapper.sm3Update(ctx, in, 2, in.length));
+        } finally {
+            NativeSunWrapper.sm3Free(ctx);
+        }
+    }
+
+    @Test
+    public void testNegativeOutputOffset() {
+        long ctx = NativeSunWrapper.sm3Init();
+        try {
+            byte[] out = new byte[32];
+            Assertions.assertThrows(ArrayIndexOutOfBoundsException.class,
+                    () -> NativeSunWrapper.sm3DoFinal(ctx, out, -1));
+        } finally {
+            NativeSunWrapper.sm3Free(ctx);
+        }
     }
 }
