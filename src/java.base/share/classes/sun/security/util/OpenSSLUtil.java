@@ -44,7 +44,7 @@ public class OpenSSLUtil {
         try {
             AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
                 if (opensslCryptoLibPath == null) {
-                    System.loadLibrary("opensslcrypto");
+                    System.loadLibrary("crypto");
                 } else {
                     System.load(opensslCryptoLibPath);
                 }
