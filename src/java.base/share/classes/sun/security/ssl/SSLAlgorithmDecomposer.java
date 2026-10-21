@@ -175,6 +175,14 @@ class SSLAlgorithmDecomposer extends AlgorithmDecomposer {
             case B_AES_256_GCM:
                 components.add("AES_256_GCM");
                 break;
+            // ShangMi cipher suites (Kona extension)
+            case B_SM4:
+                components.add("SM4_CBC");
+                break;
+            case B_SM4_GCM:
+            case B_SM4_GCM_IV:
+                components.add("SM4_GCM");
+                break;
         }
 
         return components;
@@ -256,7 +264,8 @@ class SSLAlgorithmDecomposer extends AlgorithmDecomposer {
 
     @Override
     public Set<String> decompose(String algorithm) {
-        if (algorithm.startsWith("SSL_") || algorithm.startsWith("TLS_")) {
+        if (algorithm.startsWith("SSL_") || algorithm.startsWith("TLS_")
+                || algorithm.startsWith("TLCP_")) {
             CipherSuite cipherSuite = null;
             try {
                 cipherSuite = CipherSuite.nameOf(algorithm);
