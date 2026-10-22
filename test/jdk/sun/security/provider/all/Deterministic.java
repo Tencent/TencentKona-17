@@ -47,9 +47,13 @@ import javax.crypto.spec.PBEParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
+import java.security.interfaces.ECPrivateKey;
+import java.security.interfaces.ECPublicKey;
 import java.security.spec.AlgorithmParameterSpec;
 import java.security.spec.DSAParameterSpec;
 import java.security.spec.PSSParameterSpec;
+import java.security.spec.SM2KeyAgreementParamSpec;
+import java.security.spec.SM2ParameterSpec;
 import java.util.Arrays;
 import java.util.Objects;
 
@@ -206,6 +210,9 @@ public class Deterministic {
     }
 
     static KeyPair generateKeyPair(String alg, int offset) throws Exception {
+        if (alg.equals("SM2")) {
+            return generateSM2KeyPair(offset);
+        }
         var g = KeyPairGenerator.getInstance(alg);
         var size = switch (g.getAlgorithm()) {
             case "RSA", "RSASSA-PSS", "DSA", "DiffieHellman" -> 1024;
@@ -217,6 +224,12 @@ public class Deterministic {
             default -> throw new UnsupportedOperationException(alg);
         };
         g.initialize(size, new SeededSecureRandom(SEED + offset));
+        return g.generateKeyPair();
+    }
+
+    private static KeyPair generateSM2KeyPair(int offset) throws Exception {
+        var g = KeyPairGenerator.getInstance("EC");
+        g.initialize(SM2ParameterSpec.instance(), new SeededSecureRandom(SEED + offset));
         return g.generateKeyPair();
     }
 
@@ -246,6 +259,8 @@ public class Deterministic {
             return g.generateKey();
         } if (s.equals("RSA")) {
             return generateKeyPair("RSA", 3).getPublic();
+        } if (s.equals("SM2")) {
+            return generateSM2KeyPair(5).getPublic();
         } else {
             var g = KeyGenerator.getInstance(s, p);
             g.init(new SeededSecureRandom(SEED + 4));
@@ -274,6 +289,10 @@ public class Deterministic {
         System.out.println(s.getProvider().getName()
                 + " " + s.getType() + "." + s.getAlgorithm());
         String keyAlg = getKeyAlgFromKEM(s.getAlgorithm());
+        if (keyAlg.equals("SM2")) {
+            testSM2KeyAgreement(s);
+            return;
+        }
         var kpS = generateKeyPair(keyAlg, 11);
         var kpR = generateKeyPair(keyAlg, 12);
         var ka = KeyAgreement.getInstance(s.getAlgorithm(), s.getProvider());
@@ -289,10 +308,45 @@ public class Deterministic {
         System.out.println("    Passed");
     }
 
+    private static void testSM2KeyAgreement(Provider.Service s) throws Exception {
+        var kpS = generateSM2KeyPair(11);
+        var kpSt = generateSM2KeyPair(12);
+
+        var kpR = generateSM2KeyPair(13);
+        var kpRt = generateSM2KeyPair(14);
+
+        var ka = KeyAgreement.getInstance(s.getAlgorithm(), s.getProvider());
+
+        SM2KeyAgreementParamSpec paramSpecS = new SM2KeyAgreementParamSpec(
+                (ECPrivateKey) kpS.getPrivate(),
+                (ECPublicKey) kpS.getPublic(),
+                (ECPublicKey) kpR.getPublic(),
+                true,
+                32);
+        ka.init(kpSt.getPrivate(), paramSpecS, new SeededSecureRandom(SEED));
+        ka.doPhase(kpRt.getPublic(), true);
+        var sc1 = ka.generateSecret();
+
+        SM2KeyAgreementParamSpec paramSpecR = new SM2KeyAgreementParamSpec(
+                (ECPrivateKey) kpR.getPrivate(),
+                (ECPublicKey) kpR.getPublic(),
+                (ECPublicKey) kpS.getPublic(),
+                false,
+                32);
+        ka.init(kpRt.getPrivate(), paramSpecR, new SeededSecureRandom(SEED));
+        ka.doPhase(kpSt.getPublic(), true);
+        var sc2 = ka.generateSecret();
+
+        Asserts.assertEqualsByteArray(sc1, sc2);
+        hash = Objects.hash(hash, Arrays.hashCode(sc1));
+        System.out.println("    Passed");
+    }
+
     static String getKeyAlgFromKEM(String algorithm) {
         return switch (algorithm) {
             case "DHKEM" -> "X25519";
             case "ECDH" -> "EC";
+            case "SM2" -> "SM2";
             default -> algorithm;
         };
     }

@@ -52,7 +52,8 @@ public class Generic {
 
     static void test(Provider p) throws Exception {
         for (var s : p.getServices()) {
-            if (s.getType().equalsIgnoreCase("KeyAgreement")) {
+            if (s.getType().equalsIgnoreCase("KeyAgreement")
+                    && !s.getAlgorithm().equals("SM2")) { // Ignore SM2KeyAgreement
                 try {
                     System.out.println(s.getProvider().getName() + "." + s.getAlgorithm());
                     var g = KeyPairGenerator.getInstance(ka2kpg(s.getAlgorithm()), p);
