@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025, Tencent. All rights reserved.
+ * Copyright (C) 2025, 2026, Tencent. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -20,7 +20,7 @@
 package sun.security.provider;
 
 /**
- * A wrapper of NativeSunRsaSign for exposing the internal APIs.
+ * Exposes NativeSun's internal SM3 streaming API for testing.
  */
 public class NativeSunWrapper {
 
@@ -28,7 +28,27 @@ public class NativeSunWrapper {
         return NativeSun.isNativeCryptoEnabled();
     }
 
-    public static void sm3Digest(byte[] message, byte[] out, int outOffset) {
-        NativeSun.sm3Digest(message, out, outOffset);
+    public static long sm3Init() {
+        return NativeSun.sm3Init();
+    }
+
+    public static void sm3Update(long ctx, byte[] in, int inOfs, int inLen) {
+        NativeSun.sm3Update(ctx, in, inOfs, inLen);
+    }
+
+    public static void sm3DoFinal(long ctx, byte[] out, int outOfs) {
+        NativeSun.sm3DoFinal(ctx, out, outOfs);
+    }
+
+    public static void sm3Reinit(long ctx) {
+        NativeSun.sm3Reinit(ctx);
+    }
+
+    public static long sm3Copy(long ctx) {
+        return NativeSun.sm3Copy(ctx);
+    }
+
+    public static void sm3Free(long ctx) {
+        NativeSun.sm3Free(ctx);
     }
 }

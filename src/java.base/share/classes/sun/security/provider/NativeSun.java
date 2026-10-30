@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025, Tencent. All rights reserved.
+ * Copyright (C) 2025, 2026, Tencent. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify
@@ -62,5 +62,19 @@ final class NativeSun {
         return IS_NATIVE_CRYPTO_ENABLED;
     }
 
-    public static native void sm3Digest(byte[] message, byte[] out, int outOffset);
+    // SM3 streaming interface.
+    // sm3Init creates an EVP_MD_CTX and returns an opaque pointer as a jlong.
+    // The caller MUST eventually call sm3Free exactly once.
+    static native long sm3Init();
+    static native void sm3Update(long ctx, byte[] in, int inOfs, int inLen);
+    // Writes the 32-byte digest into out[outOfs..outOfs+31] and reinitialises
+    // the context so it can be reused immediately without a new sm3Init call.
+    static native void sm3DoFinal(long ctx, byte[] out, int outOfs);
+    // Reinitialises ctx to its post-init state without producing output (used
+    // by the engine's reset() path to abort a partially-computed hash).
+    static native void sm3Reinit(long ctx);
+    // Duplicates ctx into a fresh EVP_MD_CTX and returns the new handle.
+    static native long sm3Copy(long ctx);
+    // Releases the EVP_MD_CTX. Safe to call with 0.
+    static native void sm3Free(long ctx);
 }
