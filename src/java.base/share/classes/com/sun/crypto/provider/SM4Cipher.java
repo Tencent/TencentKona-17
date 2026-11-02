@@ -26,10 +26,14 @@
 package com.sun.crypto.provider;
 
 import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
 import javax.crypto.CipherSpi;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.ShortBufferException;
+import javax.crypto.spec.IvParameterSpec;
+import java.lang.ref.Cleaner;
+import java.lang.ref.Reference;
 import java.security.AlgorithmParameters;
 import java.security.GeneralSecurityException;
 import java.security.InvalidAlgorithmParameterException;
@@ -39,7 +43,11 @@ import java.security.NoSuchAlgorithmException;
 import java.security.ProviderException;
 import java.security.SecureRandom;
 import java.security.spec.AlgorithmParameterSpec;
+import java.security.spec.InvalidParameterSpecException;
 import java.util.Arrays;
+import java.util.Locale;
+
+import jdk.internal.ref.CleanerFactory;
 
 /**
  * This class implements the SM4 algorithm in its various modes
@@ -122,6 +130,276 @@ class SM4Cipher extends CipherSpi {
         fixedKeySize = keySize;
     }
 
+    // ---------------------------------------------------------------------
+    // OpenSSL-backed native fast path (ECB / CBC / CTR).
+    //
+    // When native crypto is enabled (-Djdk.sunjce.enableNativeCrypto=true) and
+    // the requested mode/padding is supported, the whole multi-block transform
+    // is performed by OpenSSL through NativeSM4 instead of the pure-Java
+    // CipherCore. CipherCore remains the fallback for every other case
+    // (native disabled, unsupported mode/padding, wrap/unwrap, non-16-byte
+    // keys), so behaviour is identical whether native crypto is on or off.
+    // ---------------------------------------------------------------------
+
+    // Mode/padding as requested via engineSetMode/engineSetPadding; null until
+    // set (a plain "SM4" transformation never sets them and stays on Java).
+    private String cipherMode;
+    private String cipherPadding;
+
+    // Native operation state, valid only while nativeActive is true.
+    private boolean nativeActive;
+    private boolean nativeBlockMode;   // false for the stream mode CTR
+    private boolean nativeEncrypt;
+    private boolean nativePadding;     // true for PKCS7/PKCS5, false for NoPadding
+    private int nativeBuffered;        // input bytes not yet emitted (block modes)
+    private byte[] nativeIv;           // null for ECB
+    private Context nativeContext;
+    @SuppressWarnings("unused")
+    private Cleaner.Cleanable nativeCleanable;
+
+    /**
+     * Holds the native EVP_CIPHER_CTX pointer. It is registered with a Cleaner
+     * so the context is released even if the cipher is abandoned without a
+     * doFinal. Both {@link #free} and {@link #run} are idempotent.
+     */
+    private static final class Context implements Runnable {
+        private long ctx;
+
+        Context(long ctx) {
+            this.ctx = ctx;
+        }
+
+        synchronized void reset(long newCtx) {
+            if (ctx != 0) {
+                NativeSM4.cipherFree(ctx);
+            }
+            ctx = newCtx;
+        }
+
+        synchronized void free() {
+            if (ctx != 0) {
+                NativeSM4.cipherFree(ctx);
+                ctx = 0;
+            }
+        }
+
+        synchronized long handle() {
+            return ctx;
+        }
+
+        public void run() {
+            free();
+        }
+    }
+
+    private static int nativeModeFor(String mode) {
+        if (mode == null) {
+            return -1;
+        }
+        switch (mode.toUpperCase(Locale.ENGLISH)) {
+            case "ECB": return NativeSM4.MODE_ECB;
+            case "CBC": return NativeSM4.MODE_CBC;
+            case "CTR": return NativeSM4.MODE_CTR;
+            default:    return -1;
+        }
+    }
+
+    // Returns TRUE for PKCS5/PKCS7 padding, FALSE for NoPadding, null if the
+    // padding scheme cannot be handled natively.
+    private static Boolean nativePaddingFor(String padding) {
+        if (padding == null) {
+            return null;
+        }
+        String p = padding.toUpperCase(Locale.ENGLISH);
+        if (p.equals("NOPADDING")) {
+            return Boolean.FALSE;
+        }
+        if (p.equals("PKCS5PADDING") || p.equals("PKCS7PADDING")) {
+            return Boolean.TRUE;
+        }
+        return null;
+    }
+
+    private void setNativeCtx(long ctx) {
+        if (nativeContext == null) {
+            nativeContext = new Context(ctx);
+            nativeCleanable = CleanerFactory.cleaner().register(this, nativeContext);
+        } else {
+            nativeContext.reset(ctx);
+        }
+    }
+
+    private void freeNativeIfAny() {
+        if (nativeContext != null) {
+            nativeContext.free();
+        }
+        nativeIv = null;
+        nativeBuffered = 0;
+        nativeActive = false;
+    }
+
+    private byte[] deriveIv(int nativeMode, int opmode,
+                            AlgorithmParameterSpec params, SecureRandom random)
+            throws InvalidKeyException, InvalidAlgorithmParameterException {
+        if (nativeMode == NativeSM4.MODE_ECB) {
+            if (params instanceof IvParameterSpec) {
+                throw new InvalidAlgorithmParameterException(
+                        "ECB mode cannot use IV");
+            }
+            return null;
+        }
+        if (params != null) {
+            if (!(params instanceof IvParameterSpec)) {
+                throw new InvalidAlgorithmParameterException(
+                        "Unsupported parameter: IvParameterSpec expected");
+            }
+            byte[] iv = ((IvParameterSpec) params).getIV();
+            if (iv.length != 16) {
+                throw new InvalidAlgorithmParameterException(
+                        "IV must be 16 bytes long");
+            }
+            return iv.clone();
+        }
+        if (opmode == Cipher.ENCRYPT_MODE) {
+            byte[] iv = new byte[16];
+            (random != null ? random : new SecureRandom()).nextBytes(iv);
+            return iv;
+        }
+        throw new InvalidKeyException("Parameters (IV) missing");
+    }
+
+    /**
+     * Attempts to initialize the native path. Returns {@code false} (without
+     * touching native state) when the native path is not applicable, so the
+     * caller can fall back to CipherCore with identical semantics.
+     */
+    private boolean tryInitNative(int opmode, Key key,
+                                  AlgorithmParameterSpec params,
+                                  SecureRandom random)
+            throws InvalidKeyException, InvalidAlgorithmParameterException {
+        if (!NativeSM4.isNativeCryptoEnabled()) {
+            return false;
+        }
+        int nativeMode = nativeModeFor(cipherMode);
+        if (nativeMode < 0) {
+            return false;
+        }
+        Boolean padding = nativePaddingFor(cipherPadding);
+        if (padding == null) {
+            return false;
+        }
+        // wrap/unwrap keep using CipherCore
+        if (opmode != Cipher.ENCRYPT_MODE && opmode != Cipher.DECRYPT_MODE) {
+            return false;
+        }
+        byte[] keyBytes = (key == null) ? null : key.getEncoded();
+        if (keyBytes == null) {
+            return false;
+        }
+        if (keyBytes.length != 16) {
+            Arrays.fill(keyBytes, (byte) 0);
+            return false;
+        }
+
+        boolean encrypt = (opmode == Cipher.ENCRYPT_MODE);
+        byte[] iv;
+        try {
+            iv = deriveIv(nativeMode, opmode, params, random);
+        } catch (InvalidKeyException | InvalidAlgorithmParameterException e) {
+            Arrays.fill(keyBytes, (byte) 0);
+            throw e;
+        }
+
+        long ctx;
+        try {
+            ctx = NativeSM4.cipherInit(nativeMode, encrypt, keyBytes, iv, padding);
+        } finally {
+            Arrays.fill(keyBytes, (byte) 0);
+        }
+
+        setNativeCtx(ctx);
+        nativeActive = true;
+        nativeBlockMode = (nativeMode != NativeSM4.MODE_CTR);
+        nativeEncrypt = encrypt;
+        nativePadding = padding;
+        nativeBuffered = 0;
+        nativeIv = iv;
+        return true;
+    }
+
+    private byte[] nativeUpdate(byte[] in, int inOfs, int inLen) {
+        // Block modes may emit up to one extra block on top of the input; the
+        // stream mode CTR is 1:1. Use addExact so an overflow raises
+        // ArithmeticException rather than allocating an undersized buffer that
+        // the native call could then overwrite.
+        int bound = nativeBlockMode
+                ? Math.addExact(inLen, 16) : inLen;
+        byte[] tmp = new byte[bound];
+        try {
+            int n = NativeSM4.cipherUpdate(nativeContext.handle(),
+                                           in, inOfs, inLen, tmp, 0);
+            nativeBuffered += inLen - n;
+            return (n == tmp.length) ? tmp : Arrays.copyOf(tmp, n);
+        } finally {
+            // Keep `this` (and thus its Cleaner-registered Context) alive
+            // through the native call: without the fence a JIT-optimized call
+            // could otherwise let the Cleaner run cipherFree() while EVP is
+            // still operating on the context.
+            Reference.reachabilityFence(this);
+        }
+    }
+
+    /**
+     * Exact number of bytes {@link #nativeUpdate} will emit for the given
+     * input length in the current mode/padding/direction. Mirrors
+     * {@code CipherCore.update()}'s capacity computation so a
+     * {@link ShortBufferException} is only raised when the actual output
+     * really cannot fit -- and pre-check is safe (no native state consumed).
+     */
+    private int expectedUpdateOutputSize(int inputLen) {
+        // Stream mode: 1:1 (no buffering).
+        if (!nativeBlockMode) {
+            return Math.addExact(nativeBuffered, inputLen);
+        }
+        int len = Math.addExact(nativeBuffered, inputLen);
+        // Decrypt with padding: hold back one full block for potential padding
+        // stripping on the eventual doFinal, matching CipherCore.
+        if (nativePadding && !nativeEncrypt) {
+            len -= 16;
+        }
+        if (len <= 0) {
+            return 0;
+        }
+        return len - (len % 16);
+    }
+
+    private byte[] nativeDoFinal(byte[] in, int inOfs, int inLen)
+            throws IllegalBlockSizeException, BadPaddingException {
+        // Room for any buffered bytes, this input, and one final padding block.
+        // Use addExact so an overflow raises ArithmeticException instead of
+        // wrapping to a small (or negative) size that would let the native
+        // call write past the tmp array.
+        int bound = nativeBlockMode
+                ? Math.addExact(Math.addExact(nativeBuffered, inLen), 16)
+                : inLen;
+        if (bound < 16) {
+            bound = 16;
+        }
+        byte[] tmp = new byte[bound];
+        try {
+            long ctx = nativeContext.handle();
+            int n = (inLen > 0)
+                    ? NativeSM4.cipherUpdate(ctx, in, inOfs, inLen, tmp, 0) : 0;
+            int m = NativeSM4.cipherDoFinal(ctx, tmp, n);
+            nativeBuffered = 0;
+            int total = n + m;
+            return (total == tmp.length) ? tmp : Arrays.copyOf(tmp, total);
+        } finally {
+            // See nativeUpdate: fence the Cleaner off from the raw handle.
+            Reference.reachabilityFence(this);
+        }
+    }
+
     /**
      * Sets the mode of this cipher.
      *
@@ -134,6 +412,7 @@ class SM4Cipher extends CipherSpi {
     protected void engineSetMode(String mode)
         throws NoSuchAlgorithmException {
         core.setMode(mode);
+        cipherMode = mode;
     }
 
     /**
@@ -154,6 +433,7 @@ class SM4Cipher extends CipherSpi {
         } else {
             core.setPadding(paddingScheme);
         }
+        cipherPadding = paddingScheme;
     }
 
     /**
@@ -186,6 +466,14 @@ class SM4Cipher extends CipherSpi {
      */
     @Override
     protected int engineGetOutputSize(int inputLen) {
+        if (nativeActive) {
+            int totalLen = Math.addExact(nativeBuffered, inputLen);
+            // matches CipherCore: only encryption with padding grows the output
+            if (nativePadding && nativeEncrypt && nativeBlockMode) {
+                totalLen = Math.addExact(totalLen, 16 - (totalLen % 16));
+            }
+            return totalLen;
+        }
         return core.getOutputSize(inputLen);
     }
 
@@ -203,6 +491,9 @@ class SM4Cipher extends CipherSpi {
      */
     @Override
     protected byte[] engineGetIV() {
+        if (nativeActive) {
+            return (nativeIv == null) ? null : nativeIv.clone();
+        }
         return core.getIV();
     }
 
@@ -221,6 +512,20 @@ class SM4Cipher extends CipherSpi {
      */
     @Override
     protected AlgorithmParameters engineGetParameters() {
+        if (nativeActive) {
+            if (nativeIv == null) {
+                return null;
+            }
+            try {
+                AlgorithmParameters params =
+                        AlgorithmParameters.getInstance("SM4");
+                params.init(new IvParameterSpec(nativeIv));
+                return params;
+            } catch (GeneralSecurityException e) {
+                // should never happen
+                throw new ProviderException("Could not encode parameters", e);
+            }
+        }
         return core.getParameters("SM4");
     }
 
@@ -258,6 +563,15 @@ class SM4Cipher extends CipherSpi {
     protected void engineInit(int opmode, Key key, SecureRandom random)
         throws InvalidKeyException {
         checkKeySize(key, fixedKeySize);
+        try {
+            if (tryInitNative(opmode, key, null, random)) {
+                return;
+            }
+        } catch (InvalidAlgorithmParameterException e) {
+            // cannot occur without explicit parameters, but map defensively
+            throw new InvalidKeyException(e.getMessage(), e);
+        }
+        freeNativeIfAny();
         core.init(opmode, key, random);
     }
 
@@ -291,6 +605,10 @@ class SM4Cipher extends CipherSpi {
                               SecureRandom random)
         throws InvalidKeyException, InvalidAlgorithmParameterException {
         checkKeySize(key, fixedKeySize);
+        if (tryInitNative(opmode, key, params, random)) {
+            return;
+        }
+        freeNativeIfAny();
         core.init(opmode, key, params, random);
     }
 
@@ -300,6 +618,19 @@ class SM4Cipher extends CipherSpi {
                               SecureRandom random)
         throws InvalidKeyException, InvalidAlgorithmParameterException {
         checkKeySize(key, fixedKeySize);
+        AlgorithmParameterSpec spec = null;
+        boolean specUsable = true;
+        if (params != null) {
+            try {
+                spec = params.getParameterSpec(IvParameterSpec.class);
+            } catch (InvalidParameterSpecException e) {
+                specUsable = false;
+            }
+        }
+        if (specUsable && tryInitNative(opmode, key, spec, random)) {
+            return;
+        }
+        freeNativeIfAny();
         core.init(opmode, key, params, random);
     }
 
@@ -325,6 +656,9 @@ class SM4Cipher extends CipherSpi {
     @Override
     protected byte[] engineUpdate(byte[] input, int inputOffset,
                                   int inputLen) {
+        if (nativeActive) {
+            return nativeUpdate(input, inputOffset, inputLen);
+        }
         return core.update(input, inputOffset, inputLen);
     }
 
@@ -355,6 +689,21 @@ class SM4Cipher extends CipherSpi {
     protected int engineUpdate(byte[] input, int inputOffset, int inputLen,
                                byte[] output, int outputOffset)
         throws ShortBufferException {
+        if (nativeActive) {
+            // Compute the EXACT number of bytes native update will emit -- not
+            // the getOutputSize() upper bound, which mixes update and doFinal
+            // (and would falsely reject block-mode inputs that produce 0 bytes
+            // this round). Pre-checking avoids consuming native state on a
+            // ShortBufferException.
+            int expected = expectedUpdateOutputSize(inputLen);
+            if (output.length - outputOffset < expected) {
+                throw new ShortBufferException("Output buffer must be at least "
+                        + expected + " bytes long");
+            }
+            byte[] result = nativeUpdate(input, inputOffset, inputLen);
+            System.arraycopy(result, 0, output, outputOffset, result.length);
+            return result.length;
+        }
         return core.update(input, inputOffset, inputLen, output,
                            outputOffset);
     }
@@ -393,6 +742,9 @@ class SM4Cipher extends CipherSpi {
     @Override
     protected byte[] engineDoFinal(byte[] input, int inputOffset, int inputLen)
         throws IllegalBlockSizeException, BadPaddingException {
+        if (nativeActive) {
+            return nativeDoFinal(input, inputOffset, inputLen);
+        }
         return core.doFinal(input, inputOffset, inputLen);
     }
 
@@ -437,6 +789,67 @@ class SM4Cipher extends CipherSpi {
                                 byte[] output, int outputOffset)
         throws IllegalBlockSizeException, ShortBufferException,
                BadPaddingException {
+        if (nativeActive) {
+            // engineGetOutputSize() is the upper bound. For decrypt+padding it
+            // is a strict upper bound because padding removes 1..blockSize
+            // bytes: the smallest possible actual output is estOutSize -
+            // blockSize. Matching CipherCore, we only reject up front when
+            // output cannot possibly fit; the actual length is re-checked
+            // after finalize.
+            int estOutSize = engineGetOutputSize(inputLen);
+            int outputCapacity = output.length - outputOffset;
+            boolean decryptWithPadding =
+                    !nativeEncrypt && nativePadding && nativeBlockMode;
+            int minRequired = decryptWithPadding
+                    ? Math.max(0, estOutSize - 16) : estOutSize;
+            if (outputCapacity < minRequired) {
+                throw new ShortBufferException("Output buffer must be at least "
+                        + minRequired + " bytes long");
+            }
+            // On decrypt+padding, the buffer may fall between (estOutSize -
+            // blockSize) and estOutSize -- i.e. large enough to *maybe* fit,
+            // but only known after finalize strips the padding. Snapshot the
+            // native context so a post-finalize ShortBufferException can be
+            // retried on the same Cipher (matching CipherCore.doFinal, which
+            // uses cipher.save()/restore()).
+            boolean saveForRetry =
+                    decryptWithPadding && outputCapacity < estOutSize;
+            long savedCtx = 0L;
+            int savedBuffered = nativeBuffered;
+            boolean stateRestored = false;
+            try {
+                if (saveForRetry) {
+                    savedCtx = NativeSM4.cipherSave(nativeContext.handle());
+                }
+                try {
+                    byte[] result = nativeDoFinal(input, inputOffset, inputLen);
+                    if (outputCapacity < result.length) {
+                        if (saveForRetry) {
+                            NativeSM4.cipherRestore(nativeContext.handle(),
+                                                    savedCtx);
+                            stateRestored = true;
+                            nativeBuffered = savedBuffered;
+                        }
+                        throw new ShortBufferException("Output buffer must be "
+                                + "at least " + result.length + " bytes long");
+                    }
+                    System.arraycopy(result, 0, output, outputOffset,
+                                     result.length);
+                    return result.length;
+                } finally {
+                    // If we saved but didn't consume the saved state via
+                    // restore, free it now. cipherRestore already frees on
+                    // its own path.
+                    if (saveForRetry && !stateRestored) {
+                        NativeSM4.cipherFreeSaved(savedCtx);
+                    }
+                }
+            } finally {
+                // cipherSave/cipherRestore also dereference nativeContext.
+                // Fence here so the Cleaner cannot race the native calls.
+                Reference.reachabilityFence(this);
+            }
+        }
         return core.doFinal(input, inputOffset, inputLen, output,
                                   outputOffset);
     }
