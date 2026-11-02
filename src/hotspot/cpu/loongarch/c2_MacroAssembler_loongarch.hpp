@@ -72,7 +72,7 @@ public:
   // Compare char[] or byte[] arrays.
   void arrays_equals(Register str1, Register str2,
                      Register cnt, Register tmp1, Register tmp2, Register result,
-                     bool is_char);
+                     bool is_char, bool is_array);
 
  // Memory Data Type
   #define INT_TYPE 0x100

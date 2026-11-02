@@ -77,35 +77,23 @@ Address::Address(address loc, RelocationHolder spec) {
 
 
 int Assembler::is_int_mask(int x) {
-  int xx = x;
-  int count = 0;
+  int count = -1;
 
-  while (x != 0) {
-     x &= (x - 1);
-     count++;
+  if (is_power_of_2(x+1)) {
+    asm ("cto.w %0, %1 \n\t" : "=r"(count) : "r"(x));
   }
 
-  if ((1<<count) == (xx+1)) {
-     return count;
-  } else {
-     return -1;
-  }
+  return count;
 }
 
 int Assembler::is_jlong_mask(jlong x) {
-  jlong  xx = x;
-  int count = 0;
+  int count = -1;
 
-  while (x != 0) {
-     x &= (x - 1);
-     count++;
+  if (is_power_of_2(x+1)) {
+    asm ("cto.d %0, %1 \n\t" : "=r"(count) : "r"(x));
   }
 
-  if ((1<<count) == (xx+1)) {
-     return count;
-  } else {
-     return -1;
-  }
+  return count;
 }
 
 int AbstractAssembler::code_fill_byte() {

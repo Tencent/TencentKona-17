@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2021, 2023, Loongson Technology. All rights reserved.
+ * Copyright (c) 2021, 2026, Loongson Technology. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -176,22 +176,25 @@ void C2_MacroAssembler::fast_lock(Register objReg, Register boxReg, Register res
   // at [FETCH], below, will never observe a biased encoding (*101b).
   // If this invariant is not held we risk exclusion (safety) failure.
   if (UseBiasedLocking && !UseOptoBiasInlining) {
-    Label succ, fail;
-    biased_locking_enter(boxReg, objReg, tmpReg, scrReg, false, succ, NULL);
+    Label succ, fail, fail_slow;
+    biased_locking_enter(boxReg, objReg, tmpReg, scrReg, false, succ, &fail_slow);
     b(fail);
     bind(succ);
     li(resReg, 1);
     b(DONE);
+    bind(fail_slow);
+    move(resReg, R0);
+    b(DONE);
     bind(fail);
   }
 
-  ld_d(tmpReg, Address(objReg, 0)); //Fetch the markword of the object.
+  ld_d(tmpReg, objReg, 0); //Fetch the markword of the object.
   andi(AT, tmpReg, markWord::monitor_value);
   bnez(AT, IsInflated); // inflated vs stack-locked|neutral|bias
 
   // Attempt stack-locking ...
   ori(tmpReg, tmpReg, markWord::unlocked_value);
-  st_d(tmpReg, Address(boxReg, 0)); // Anticipate successful CAS
+  st_d(tmpReg, boxReg, 0); // Anticipate successful CAS
 
   if (PrintBiasedLockingStatistics) {
     Label SUCC, FAIL;
@@ -212,7 +215,7 @@ void C2_MacroAssembler::fast_lock(Register objReg, Register boxReg, Register res
   sub_d(tmpReg, tmpReg, SP);
   li(AT, 7 - os::vm_page_size());
   andr(tmpReg, tmpReg, AT);
-  st_d(tmpReg, Address(boxReg, 0));
+  st_d(tmpReg, boxReg, 0);
 
   if (PrintBiasedLockingStatistics) {
     Label L;
@@ -236,7 +239,7 @@ void C2_MacroAssembler::fast_lock(Register objReg, Register boxReg, Register res
   // avoid an RTO->RTS upgrade on the $line.
   // Without cast to int32_t a movptr will destroy r10 which is typically obj
   li(AT, (int32_t)intptr_t(markWord::unused_mark().value()));
-  st_d(AT, Address(boxReg, 0));
+  st_d(AT, boxReg, 0);
 
   ld_d(AT, Address(tmpReg, ObjectMonitor::owner_offset_in_bytes() - 2));
   // if (m->owner != 0) => AT = 0, goto slow path.
@@ -317,11 +320,11 @@ void C2_MacroAssembler::fast_unlock(Register objReg, Register boxReg, Register r
     bind(fail);
   }
 
-  ld_d(tmpReg, Address(boxReg, 0)); // Examine the displaced header
+  ld_d(tmpReg, boxReg, 0); // Examine the displaced header
   sltui(AT, tmpReg, 1);
   beqz(tmpReg, DONE_SET); // 0 indicates recursive stack-lock
 
-  ld_d(tmpReg, Address(objReg, 0)); // Examine the object's markword
+  ld_d(tmpReg, objReg, 0); // Examine the object's markword
   andi(AT, tmpReg, markWord::monitor_value);
   beqz(AT, Stacked); // Inflated?
 
@@ -373,7 +376,7 @@ void C2_MacroAssembler::fast_unlock(Register objReg, Register boxReg, Register r
   b(DONE);
 
   bind(Stacked);
-  ld_d(tmpReg, Address(boxReg, 0));
+  ld_d(tmpReg, boxReg, 0);
   cmpxchg(Address(objReg, 0), boxReg, tmpReg, AT, false, true /* acquire */);
 
   bind(DONE_SET);
@@ -1266,42 +1269,72 @@ void C2_MacroAssembler::string_compare(Register str1, Register str2,
 // Compare char[] or byte[] arrays or substrings.
 void C2_MacroAssembler::arrays_equals(Register str1, Register str2,
                                    Register cnt, Register tmp1, Register tmp2, Register result,
-                                   bool is_char) {
-  Label Loop, LoopEnd, True, False;
+                                   bool is_char, bool is_array) {
+  assert_different_registers(str1, str2, result, cnt, tmp1, tmp2);
+  Label Loop, LoopEnd, ShortLoop, True, False;
+  Label A_IS_NOT_NULL, A_MIGHT_BE_NULL;
+
+  int length_offset  = arrayOopDesc::length_offset_in_bytes();
+  int base_offset    = arrayOopDesc::base_offset_in_bytes(is_char ? T_CHAR : T_BYTE);
 
   addi_d(result, R0, 1);
-  beq(str1, str2, True);  // same char[] ?
+  // Check the input args
+  beq(str1, str2, True); // May have read barriers for str1 and str2 if is_array is true.
+  if (is_array) {
+    // Need additional checks for arrays_equals.
+    andr(tmp1, str1, str2);
+    beqz(tmp1, A_MIGHT_BE_NULL);
+    bind(A_IS_NOT_NULL);
+
+    // Check the lengths
+    ld_w(cnt, str1, length_offset);
+    ld_w(tmp1, str2, length_offset);
+    bne(cnt, tmp1, False);
+  }
   beqz(cnt, True);
 
-  addi_d(AT, R0, is_char ? wordSize/2 : wordSize);
+  if (is_array) {
+    addi_d(str1, str1, base_offset);
+    addi_d(str2, str2, base_offset);
+  }
+
+  if (is_char && is_array) {
+    slli_w(cnt, cnt, 1);
+  }
+  move(AT, R0);
+  addi_w(cnt, cnt, -8);
+  blt(cnt, R0, LoopEnd);
   bind(Loop);
-  blt(cnt, AT, LoopEnd);
-  ld_d(tmp1, str1, 0);
-  ld_d(tmp2, str2, 0);
+  ldx_d(tmp1, str1, AT);
+  ldx_d(tmp2, str2, AT);
   bne(tmp1, tmp2, False);
-  addi_d(str1, str1, 8);
-  addi_d(str2, str2, 8);
-  addi_d(cnt, cnt, is_char ? -wordSize/2 : -wordSize);
-  b(Loop);
+  addi_w(AT, AT, 8);
+  addi_w(cnt, cnt, -8);
+  bge(cnt, R0, Loop);
+  li(tmp1, -8);
+  beq(cnt, tmp1, True);
 
   bind(LoopEnd);
-  beqz(cnt, True);
-  // compare current character
-  if (is_char) {
-    ld_hu(tmp1, str1, 0);
-    ld_hu(tmp2, str2, 0);
-  } else {
-    ld_bu(tmp1, str1, 0);
-    ld_bu(tmp2, str2, 0);
-  }
+  addi_d(cnt, cnt, 8);
+
+  bind(ShortLoop);
+  ldx_bu(tmp1, str1, AT);
+  ldx_bu(tmp2, str2, AT);
   bne(tmp1, tmp2, False);
-  addi_d(str1, str1, is_char ? 2 : 1);
-  addi_d(str2, str2, is_char ? 2 : 1);
-  addi_d(cnt, cnt, -1);
-  b(LoopEnd);
+  addi_w(AT, AT, 1);
+  addi_w(cnt, cnt, -1);
+  bnez(cnt, ShortLoop);
+  b(True);
+
+  if (is_array) {
+    bind(A_MIGHT_BE_NULL);
+    beqz(str1, False);
+    beqz(str2, False);
+    b(A_IS_NOT_NULL);
+  }
 
   bind(False);
-  addi_d(result, R0, 0);
+  move(result, R0);
 
   bind(True);
 }

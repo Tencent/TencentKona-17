@@ -3542,7 +3542,6 @@ void TemplateTable::_new() {
   Label done;
   Label initialize_header;
   Label initialize_object; // including clearing the fields
-  Label allocate_shared;
 
   __ get_cpool_and_tags(A1, T1);
 
@@ -3555,7 +3554,7 @@ void TemplateTable::_new() {
     __ membar(Assembler::Membar_mask_bits(__ LoadLoad|__ LoadStore));
   }
   __ addi_d(AT, AT, -(int)JVM_CONSTANT_Class);
-  __ bne(AT, R0, slow_case);
+  __ bnez(AT, slow_case);
 
   // get InstanceKlass
   __ load_resolved_klass_at_index(A1, A2, T3);
@@ -3564,87 +3563,53 @@ void TemplateTable::_new() {
   // make sure klass is fully initialized
   __ ld_hu(T1, T3, in_bytes(InstanceKlass::init_state_offset()));
   __ addi_d(AT, T1, - (int)InstanceKlass::fully_initialized);
-  __ bne(AT, R0, slow_case);
+  __ bnez(AT, slow_case);
 
   // has_finalizer
   __ ld_w(T0, T3, in_bytes(Klass::layout_helper_offset()) );
   __ andi(AT, T0, Klass::_lh_instance_slow_path_bit);
-  __ bne(AT, R0, slow_case);
+  __ bnez(AT, slow_case);
 
-  // Allocate the instance
-  // 1) Try to allocate in the TLAB
-  // 2) if fail and the object is large allocate in the shared Eden
-  // 3) if the above fails (or is not applicable), go to a slow case
-  // (creates a new TLAB, etc.)
-
+  // Allocate the instance:
+  //  If TLAB is enabled:
+  //    Try to allocate in the TLAB.
+  //    If fails, go to the slow path.
+  //  Else If inline contiguous allocations are enabled:
+  //    Try to allocate in eden.
+  //    If fails due to heap end, go to slow path.
+  //
+  //  If TLAB is enabled OR inline contiguous is enabled:
+  //    Initialize the allocation.
+  //    Exit.
+  //
+  //  Go to slow path.
   const bool allow_shared_alloc =
     Universe::heap()->supports_inline_contig_alloc();
 
-#ifndef OPT_THREAD
-    const Register thread = T8;
-    if (UseTLAB || allow_shared_alloc) {
-      __ get_thread(thread);
-    }
-#else
-    const Register thread = TREG;
-#endif
-
   if (UseTLAB) {
-    // get tlab_top
-    __ ld_d(FSR, thread, in_bytes(JavaThread::tlab_top_offset()));
-    // get tlab_end
-    __ ld_d(AT, thread, in_bytes(JavaThread::tlab_end_offset()));
-    __ add_d(T2, FSR, T0);
-    __ blt(AT, T2, allow_shared_alloc ? allocate_shared : slow_case);
-    __ st_d(T2, thread, in_bytes(JavaThread::tlab_top_offset()));
+    __ tlab_allocate(FSR, T0, 0, noreg, T2, slow_case);
 
     if (ZeroTLAB) {
       // the fields have been already cleared
-      __ beq(R0, R0, initialize_header);
+      __ b(initialize_header);
     } else {
       // initialize both the header and fields
-      __ beq(R0, R0, initialize_object);
+      __ b(initialize_object);
+    }
+  } else {
+    // Allocation in the shared Eden, if allowed.
+    if (allow_shared_alloc) {
+      __ eden_allocate(FSR, T0, 0, T2, slow_case);
     }
   }
 
-  // Allocation in the shared Eden , if allowed
-  // T0 : instance size in words
-  if(allow_shared_alloc){
-    __ bind(allocate_shared);
-
-    Label done, retry;
-    Address heap_top(T1);
-    __ li(T1, (long)Universe::heap()->top_addr());
-    __ ld_d(FSR, heap_top);
-
-    __ bind(retry);
-    __ li(AT, (long)Universe::heap()->end_addr());
-    __ ld_d(AT, AT, 0);
-    __ add_d(T2, FSR, T0);
-    __ blt(AT, T2, slow_case);
-
-    // Compare FSR with the top addr, and if still equal, store the new
-    // top addr in T2 at the address of the top addr pointer. Sets AT if was
-    // equal, and clears it otherwise. Use lock prefix for atomicity on MPs.
-    //
-    // FSR: object begin
-    // T2: object end
-    // T0: instance size in words
-
-    // if someone beat us on the allocation, try again, otherwise continue
-    __ cmpxchg(heap_top, FSR, T2, AT, true, true, done, &retry);
-
-    __ bind(done);
-    __ incr_allocated_bytes(thread, T0, 0);
-  }
-
-  if (UseTLAB || Universe::heap()->supports_inline_contig_alloc()) {
+  if (UseTLAB || allow_shared_alloc) {
     // The object is initialized before the header.  If the object size is
     // zero, go directly to the header initialization.
     __ bind(initialize_object);
     __ li(AT, - sizeof(oopDesc));
     __ add_d(T0, T0, AT);
-    __ beq(T0, R0, initialize_header);
+    __ beqz(T0, initialize_header);
 
     // initialize remaining object fields: T0 is a multiple of 2
     {
@@ -3675,8 +3640,7 @@ void TemplateTable::_new() {
       SkipIfEqual skip_if(_masm, &DTraceAllocProbes, 0);
       // Trigger dtrace event for fastpath
       __ push(atos);
-      __ call_VM_leaf(
-           CAST_FROM_FN_PTR(address, SharedRuntime::dtrace_object_alloc), FSR);
+      __ call_VM_leaf(CAST_FROM_FN_PTR(address, SharedRuntime::dtrace_object_alloc), FSR);
       __ pop(atos);
 
     }

@@ -1583,12 +1583,7 @@ uint MachSpillCopyNode::implementation( CodeBuffer *cbuf, PhaseRegAlloc *ra_, bo
           if (this->ideal_reg() == Op_RegI)
             __ ld_w(as_Register(Matcher::_regEncode[dst_first]), Address(SP, offset));
           else {
-            if (Assembler::is_simm(offset, 12)) {
-              __ ld_wu(as_Register(Matcher::_regEncode[dst_first]), Address(SP, offset));
-            } else {
-              __ li(AT, offset);
-              __ ldx_wu(as_Register(Matcher::_regEncode[dst_first]), SP, AT);
-            }
+            __ ld_wu(as_Register(Matcher::_regEncode[dst_first]), Address(SP, offset));
           }
 #ifndef PRODUCT
         } else {
@@ -1612,12 +1607,7 @@ uint MachSpillCopyNode::implementation( CodeBuffer *cbuf, PhaseRegAlloc *ra_, bo
         int offset = ra_->reg2offset(src_first);
         if (cbuf) {
           C2_MacroAssembler _masm(cbuf);
-          if (Assembler::is_simm(offset, 12)) {
-            __ fld_d( as_FloatRegister(Matcher::_regEncode[dst_first]), Address(SP, offset));
-          } else {
-            __ li(AT, offset);
-            __ fldx_d( as_FloatRegister(Matcher::_regEncode[dst_first]), SP, AT);
-          }
+          __ fld_d( as_FloatRegister(Matcher::_regEncode[dst_first]), Address(SP, offset));
 #ifndef PRODUCT
         } else {
           st->print("\tfld_d  %s, [SP + #%d]\t# spill 6",
@@ -1758,13 +1748,7 @@ uint MachSpillCopyNode::implementation( CodeBuffer *cbuf, PhaseRegAlloc *ra_, bo
         int offset = ra_->reg2offset(dst_first);
         if (cbuf) {
           C2_MacroAssembler _masm(cbuf);
-          if (Assembler::is_simm(offset, 12)) {
-            __ fst_d( as_FloatRegister(Matcher::_regEncode[src_first]), Address(SP, offset) );
-          }
-          else {
-            __ li(AT, offset);
-            __ fstx_d( as_FloatRegister(Matcher::_regEncode[src_first]), SP, AT);
-          }
+          __ fst_d( as_FloatRegister(Matcher::_regEncode[src_first]), Address(SP, offset) );
 #ifndef PRODUCT
         } else {
           st->print("\n\t");
@@ -5803,11 +5787,8 @@ instruct jmpDir_short(label labl) %{
   format %{ "JMP    $labl #@jmpDir_short" %}
 
   ins_encode %{
-    Label *L = $labl$$label;
-    if(L)
-       __ b(*L);
-    else
-       __ b(int(0));
+    Label &L = *($labl$$label);
+    __ b(L);
   %}
 
     ins_pipe( pipe_jump );
@@ -5869,19 +5850,13 @@ instruct jmpCon_flags_short(cmpOpEqNe cop, FlagsReg cr, label labl) %{
   format %{ "J$cop    $labl  #LoongArch uses T0 as equivalent to eflag @jmpCon_flags_short" %}
 
   ins_encode %{
-    Label    *L =  $labl$$label;
+    Label    &L =  *($labl$$label);
     switch($cop$$cmpcode) {
       case 0x01: //equal
-        if (L)
-          __ bnez($cr$$Register, *L);
-        else
-          __ bnez($cr$$Register, (int)0);
+        __ bnez($cr$$Register, L);
         break;
       case 0x02: //not equal
-        if (L)
-          __ beqz($cr$$Register, *L);
-        else
-          __ beqz($cr$$Register, (int)0);
+        __ beqz($cr$$Register, L);
         break;
       default:
         Unimplemented();
@@ -6187,51 +6162,33 @@ instruct branchConF_reg_reg_short(cmpOp cmp, regF src1, regF src2, label labl) %
   ins_encode %{
     FloatRegister reg_op1 = $src1$$FloatRegister;
     FloatRegister reg_op2 = $src2$$FloatRegister;
-    Label     *L =  $labl$$label;
+    Label     &L =  *($labl$$label);
     int     flag = $cmp$$cmpcode;
 
     switch(flag) {
       case 0x01: //equal
         __ fcmp_ceq_s(FCC0, reg_op1, reg_op2);
-        if (L)
-          __ bcnez(FCC0, *L);
-        else
-          __ bcnez(FCC0, (int)0);
+        __ bcnez(FCC0, L);
         break;
       case 0x02: //not_equal
         __ fcmp_ceq_s(FCC0, reg_op1, reg_op2);
-        if (L)
-          __ bceqz(FCC0, *L);
-        else
-          __ bceqz(FCC0, (int)0);
+        __ bceqz(FCC0, L);
         break;
       case 0x03: //greater
         __ fcmp_cule_s(FCC0, reg_op1, reg_op2);
-        if (L)
-          __ bceqz(FCC0, *L);
-        else
-          __ bceqz(FCC0, (int)0);
+        __ bceqz(FCC0, L);
         break;
       case 0x04: //greater_equal
         __ fcmp_cult_s(FCC0, reg_op1, reg_op2);
-        if (L)
-          __ bceqz(FCC0, *L);
-        else
-          __ bceqz(FCC0, (int)0);
+        __ bceqz(FCC0, L);
         break;
       case 0x05: //less
         __ fcmp_cult_s(FCC0, reg_op1, reg_op2);
-        if (L)
-          __ bcnez(FCC0, *L);
-        else
-          __ bcnez(FCC0, (int)0);
+        __ bcnez(FCC0, L);
         break;
       case 0x06: //less_equal
         __ fcmp_cule_s(FCC0, reg_op1, reg_op2);
-        if (L)
-          __ bcnez(FCC0, *L);
-        else
-          __ bcnez(FCC0, (int)0);
+        __ bcnez(FCC0, L);
         break;
       default:
         Unimplemented();
@@ -6251,52 +6208,34 @@ instruct branchConD_reg_reg_short(cmpOp cmp, regD src1, regD src2, label labl) %
   ins_encode %{
     FloatRegister reg_op1 = $src1$$FloatRegister;
     FloatRegister reg_op2 = $src2$$FloatRegister;
-    Label     *L =  $labl$$label;
+    Label     &L =  *($labl$$label);
     int     flag = $cmp$$cmpcode;
 
     switch(flag) {
       case 0x01: //equal
         __ fcmp_ceq_d(FCC0, reg_op1, reg_op2);
-        if (L)
-          __ bcnez(FCC0, *L);
-        else
-          __ bcnez(FCC0, (int)0);
+        __ bcnez(FCC0, L);
         break;
       case 0x02: //not_equal
         // c_ueq_d cannot distinguish NaN from equal. Double.isNaN(Double) is implemented by 'f != f', so the use of c_ueq_d causes bugs.
         __ fcmp_ceq_d(FCC0, reg_op1, reg_op2);
-        if (L)
-          __ bceqz(FCC0, *L);
-        else
-          __ bceqz(FCC0, (int)0);
+        __ bceqz(FCC0, L);
         break;
       case 0x03: //greater
         __ fcmp_cule_d(FCC0, reg_op1, reg_op2);
-        if (L)
-          __ bceqz(FCC0, *L);
-        else
-          __ bceqz(FCC0, (int)0);
+        __ bceqz(FCC0, L);
         break;
       case 0x04: //greater_equal
         __ fcmp_cult_d(FCC0, reg_op1, reg_op2);
-        if (L)
-          __ bceqz(FCC0, *L);
-        else
-          __ bceqz(FCC0, (int)0);
+        __ bceqz(FCC0, L);
         break;
       case 0x05: //less
         __ fcmp_cult_d(FCC0, reg_op1, reg_op2);
-        if (L)
-          __ bcnez(FCC0, *L);
-        else
-          __ bcnez(FCC0, (int)0);
+        __ bcnez(FCC0, L);
         break;
       case 0x06: //less_equal
         __ fcmp_cule_d(FCC0, reg_op1, reg_op2);
-        if (L)
-          __ bcnez(FCC0, *L);
-        else
-          __ bcnez(FCC0, (int)0);
+        __ bcnez(FCC0, L);
         break;
       default:
         Unimplemented();
@@ -7424,6 +7363,7 @@ instruct cmovF_cmpF_reg_reg(regF dst, regF src, regF tmp1, regF tmp2, cmpOp cop 
 // This is the test to avoid.
 instruct cmpL3_reg_zero(mRegI dst, mRegL src1, immL_0 zero) %{
   match(Set dst (CmpL3 src1 zero));
+  match(Set dst (CmpL3 (CastLL src1) zero));
   ins_cost(1000);
   format %{ "cmpL3  $dst, $src1, zero @ cmpL3_reg_zero" %}
   ins_encode %{
@@ -7792,15 +7732,45 @@ instruct string_inflate(Universe dummy, a4_RegP src, a5_RegP dst, mA6RegI len,
 %}
 
 // intrinsic optimization
-instruct string_equals(a4_RegP str1, a5_RegP str2, mA6RegI cnt, no_Ax_mRegI result, t8RegL tmp1, t3RegL tmp2) %{
+instruct string_equals(a4_RegP str1, a5_RegP str2, mA6RegI cnt, no_Ax_mRegI result, mRegL tmp1, mRegL tmp2) %{
   match(Set result (StrEquals (Binary str1 str2) cnt));
-  effect(USE_KILL str1, USE_KILL str2, USE_KILL cnt, KILL tmp1, KILL tmp2);
+  effect(USE_KILL str1, USE_KILL str2, USE_KILL cnt, TEMP_DEF result, TEMP tmp1, TEMP tmp2);
 
-  format %{ "String Equal $str1, $str2, len:$cnt, tmp1:$tmp1, tmp2:$tmp2 -> $result @ string_equals" %}
+  format %{ "String Equal $str1, $str2, len:$cnt -> $result TEMP($tmp1, $tmp2) @ string_equals" %}
   ins_encode %{
     __ arrays_equals($str1$$Register, $str2$$Register,
                      $cnt$$Register, $tmp1$$Register, $tmp2$$Register, $result$$Register,
-                     false/* byte */);
+                     false/* is_char */, false/* is_array */);
+  %}
+
+  ins_pipe( pipe_slow );
+%}
+
+instruct array_equalsB(a4_RegP ary1, a5_RegP ary2, no_Ax_mRegI result, mRegL tmp0, mRegL tmp1, mRegL tmp2) %{
+  predicate(((AryEqNode*)n)->encoding() == StrIntrinsicNode::LL);
+  match(Set result (AryEq ary1 ary2));
+  effect(USE_KILL ary1, USE_KILL ary2, TEMP_DEF result, TEMP tmp0, TEMP tmp1, TEMP tmp2);
+
+  format %{ "Array Equals byte[] $ary1,$ary2 -> $result TEMP($tmp0, $tmp1, $tmp2) @ array_equalsB" %}
+  ins_encode %{
+    __ arrays_equals($ary1$$Register, $ary2$$Register,
+                     $tmp0$$Register, $tmp1$$Register, $tmp2$$Register, $result$$Register,
+                     false/* is_char */, true/* is_array */);
+  %}
+
+  ins_pipe( pipe_slow );
+%}
+
+instruct array_equalsC(a4_RegP ary1, a5_RegP ary2, no_Ax_mRegI result, mRegL tmp0, mRegL tmp1, mRegL tmp2) %{
+  predicate(((AryEqNode*)n)->encoding() == StrIntrinsicNode::UU);
+  match(Set result (AryEq ary1 ary2));
+  effect(USE_KILL ary1, USE_KILL ary2, TEMP_DEF result, TEMP tmp0, TEMP tmp1, TEMP tmp2);
+
+  format %{ "Array Equals char[] $ary1,$ary2 -> $result TEMP($tmp0, $tmp1, $tmp2) @ array_equalsC" %}
+  ins_encode %{
+    __ arrays_equals($ary1$$Register, $ary2$$Register,
+                     $tmp0$$Register, $tmp1$$Register, $tmp2$$Register, $result$$Register,
+                     true/* is_char */, true/* is_array */);
   %}
 
   ins_pipe( pipe_slow );
@@ -7848,6 +7818,7 @@ instruct encode_ascii_array(a4_RegP src, a5_RegP dst, mA6RegI len, no_Ax_mRegI r
 //----------Addition Instructions---------------------------------------------
 instruct addI_Reg_Reg(mRegI dst, mRegIorL2I src1, mRegIorL2I src2) %{
   match(Set dst (AddI src1 src2));
+  match(Set dst (AddI (CastII src1) src2));
 
   format %{ "add   $dst, $src1, $src2 #@addI_Reg_Reg" %}
   ins_encode %{
@@ -15456,6 +15427,204 @@ instruct alltrue_in_maskV32(mRegI dst, vecY src1, vecY src2, vecY tmp1, vecY tmp
   ins_pipe(pipe_slow);
 %}
 
+// ----------------------------- VectorMaskTrueCount ----------------------------
+
+instruct vmask_truecount16B(mRegI dst, vecX src, vecX tmp1, vecX tmp2) %{
+  predicate(vector_element_basic_type(n->in(1)) == T_BOOLEAN);
+  match(Set dst (VectorMaskTrueCount src));
+  effect(TEMP tmp1, TEMP tmp2);
+  format %{ "vmask_truecount   $dst, $src\t# TEMP($tmp1, $tmp2) @vmask_truecount16B" %}
+  ins_encode %{
+    // Input "src" is a vector of boolean represented as bytes with
+    // 0x00/0x01 as element values.
+    __ vpermi_w($tmp1$$FloatRegister, $src$$FloatRegister, 0b00001110);
+    __ vadd_b($tmp1$$FloatRegister, $src$$FloatRegister, $tmp1$$FloatRegister);
+    __ vshuf4i_w($tmp2$$FloatRegister, $tmp1$$FloatRegister, 0b00000001);
+    __ vadd_b($tmp1$$FloatRegister, $tmp2$$FloatRegister, $tmp1$$FloatRegister);
+    __ vshuf4i_h($tmp2$$FloatRegister, $tmp1$$FloatRegister, 0b00000001);
+    __ vadd_b($tmp1$$FloatRegister, $tmp2$$FloatRegister, $tmp1$$FloatRegister);
+    __ vshuf4i_b($tmp2$$FloatRegister, $tmp1$$FloatRegister, 0b00000001);
+    __ vadd_b($tmp1$$FloatRegister, $tmp2$$FloatRegister, $tmp1$$FloatRegister);
+    __ vpickve2gr_b($dst$$Register, $tmp1$$FloatRegister, 0);
+  %}
+  ins_pipe(pipe_slow);
+%}
+
+instruct vmask_truecount32B(mRegI dst, vecY src, vecY tmp1, vecY tmp2) %{
+  predicate(vector_element_basic_type(n->in(1)) == T_BOOLEAN);
+  match(Set dst (VectorMaskTrueCount src));
+  effect(TEMP tmp1, TEMP tmp2);
+  format %{ "vmask_truecount   $dst, $src\t# TEMP($tmp1, $tmp2) @vmask_truecount32B" %}
+  ins_encode %{
+    // Input "src" is a vector of boolean represented as bytes with
+    // 0x00/0x01 as element values.
+    __ xvpermi_d($tmp1$$FloatRegister, $src$$FloatRegister, 0b00001110);
+    __ vadd_b($tmp1$$FloatRegister, $src$$FloatRegister, $tmp1$$FloatRegister);
+    __ vpermi_w($tmp2$$FloatRegister, $tmp1$$FloatRegister, 0b00001110);
+    __ vadd_b($tmp1$$FloatRegister, $tmp2$$FloatRegister, $tmp1$$FloatRegister);
+    __ vshuf4i_w($tmp2$$FloatRegister, $tmp1$$FloatRegister, 0b00000001);
+    __ vadd_b($tmp1$$FloatRegister, $tmp2$$FloatRegister, $tmp1$$FloatRegister);
+    __ vshuf4i_h($tmp2$$FloatRegister, $tmp1$$FloatRegister, 0b00000001);
+    __ vadd_b($tmp1$$FloatRegister, $tmp2$$FloatRegister, $tmp1$$FloatRegister);
+    __ vshuf4i_b($tmp2$$FloatRegister, $tmp1$$FloatRegister, 0b00000001);
+    __ vadd_b($tmp1$$FloatRegister, $tmp2$$FloatRegister, $tmp1$$FloatRegister);
+    __ vpickve2gr_b($dst$$Register, $tmp1$$FloatRegister, 0);
+  %}
+  ins_pipe(pipe_slow);
+%}
+
+// ----------------------------- VectorMaskFirstTrue ----------------------------
+
+instruct vmask_firsttrue16B(mRegI dst, vecX src, mRegI tmp) %{
+  predicate(vector_element_basic_type(n->in(1)) == T_BOOLEAN);
+  match(Set dst (VectorMaskFirstTrue src));
+  effect(TEMP_DEF dst, TEMP tmp);
+  format %{ "vmask_firsttrue    $dst, $src\t# TEMP($tmp) @vmask_firsttrue16B" %}
+  ins_encode %{
+    // Returns the index of the first active lane of the
+    // vector mask, or 16 (VLENGTH) if no lane is active.
+    //
+    // Input "src" is a vector of boolean represented as
+    // bytes with 0x00/0x01 as element values.
+
+    Label FIRST_TRUE_INDEX;
+
+    // Try to compute the result from lower 64 bits.
+    __ vpickve2gr_d($dst$$Register, $src$$FloatRegister, 0);
+    __ li($tmp$$Register, (long)0);
+    __ bnez($dst$$Register, FIRST_TRUE_INDEX);
+
+    // Compute the result from the higher 64 bits.
+    __ vpickve2gr_d($dst$$Register, $src$$FloatRegister, 1);
+    __ li($tmp$$Register, (long)8);
+
+    // Count the Trailing zero bytes.
+    __ bind(FIRST_TRUE_INDEX);
+    __ ctz_d($dst$$Register, $dst$$Register);
+    __ srli_w($dst$$Register, $dst$$Register, 3);
+    __ add_w($dst$$Register, $tmp$$Register, $dst$$Register);
+  %}
+  ins_pipe(pipe_slow);
+%}
+
+instruct vmask_firsttrue32B(mRegI dst, vecY src, mRegI tmp) %{
+  predicate(vector_element_basic_type(n->in(1)) == T_BOOLEAN);
+  match(Set dst (VectorMaskFirstTrue src));
+  effect(TEMP_DEF dst, TEMP tmp);
+  format %{ "vmask_firsttrue    $dst, $src\t# TEMP($tmp) @vmask_firsttrue32B" %}
+  ins_encode %{
+    // Returns the index of the first active lane of the
+    // vector mask, or 32 (VLENGTH) if no lane is active.
+    //
+    // Input "src" is a vector of boolean represented as
+    // bytes with 0x00/0x01 as element values.
+
+    Label FIRST_TRUE_INDEX;
+
+    // Try to compute the result from lower 64 bits.
+    __ xvpickve2gr_d($dst$$Register, $src$$FloatRegister, 0);
+    __ li($tmp$$Register, (long)0);
+    __ bnez($dst$$Register, FIRST_TRUE_INDEX);
+
+    // Compute the result from the mid-lower 64 bits.
+    __ xvpickve2gr_d($dst$$Register, $src$$FloatRegister, 1);
+    __ li($tmp$$Register, (long)8);
+    __ bnez($dst$$Register, FIRST_TRUE_INDEX);
+
+    // Compute the result from the mid-higher 64 bits.
+    __ xvpickve2gr_d($dst$$Register, $src$$FloatRegister, 2);
+    __ li($tmp$$Register, (long)16);
+    __ bnez($dst$$Register, FIRST_TRUE_INDEX);
+
+    // Compute the result from the higher 64 bits.
+    __ xvpickve2gr_d($dst$$Register, $src$$FloatRegister, 3);
+    __ li($tmp$$Register, (long)24);
+
+    // Count the Trailing zero bytes.
+    __ bind(FIRST_TRUE_INDEX);
+    __ ctz_d($dst$$Register, $dst$$Register);
+    __ srli_w($dst$$Register, $dst$$Register, 3);
+    __ add_w($dst$$Register, $tmp$$Register, $dst$$Register);
+  %}
+  ins_pipe(pipe_slow);
+%}
+
+// ----------------------------- VectorMaskLastTrue ----------------------------
+
+instruct vmask_lasttrue16B(mRegI dst, vecX src, mRegI tmp) %{
+  predicate(vector_element_basic_type(n->in(1)) == T_BOOLEAN);
+  match(Set dst (VectorMaskLastTrue src));
+  effect(TEMP_DEF dst, TEMP tmp);
+  format %{ "vmask_lasttrue    $dst, $src\t# TEMP($tmp) @vmask_lasttrue16B" %}
+  ins_encode %{
+    // Returns the index of the last active lane of the
+    // vector mask, or -1 if no lane is active.
+    //
+    // Input "src" is a vector of boolean represented as
+    // bytes with 0x00/0x01 as element values.
+
+    Label FIRST_TRUE_INDEX;
+
+    // Try to compute the result from higher 64 bits.
+    __ vpickve2gr_d($dst$$Register, $src$$FloatRegister, 1);
+    __ li($tmp$$Register, (long)16 - 1);
+    __ bnez($dst$$Register, FIRST_TRUE_INDEX);
+
+    // Compute the result from the lower 64 bits.
+    __ vpickve2gr_d($dst$$Register, $src$$FloatRegister, 0);
+    __ li($tmp$$Register, (long)8 - 1);
+
+    // Count the Trailing zero bytes.
+    __ bind(FIRST_TRUE_INDEX);
+    __ clz_d($dst$$Register, $dst$$Register);
+    __ srli_w($dst$$Register, $dst$$Register, 3);
+    __ sub_w($dst$$Register, $tmp$$Register, $dst$$Register);
+  %}
+  ins_pipe(pipe_slow);
+%}
+
+instruct vmask_lasttrue32B(mRegI dst, vecY src, mRegI tmp) %{
+  predicate(vector_element_basic_type(n->in(1)) == T_BOOLEAN);
+  match(Set dst (VectorMaskLastTrue src));
+  effect(TEMP_DEF dst, TEMP tmp);
+  format %{ "vmask_lasttrue    $dst, $src\t# TEMP($tmp) @vmask_lasttrue32B" %}
+  ins_encode %{
+    // Returns the index of the last active lane of the
+    // vector mask, or -1 if no lane is active.
+    //
+    // Input "src" is a vector of boolean represented as
+    // bytes with 0x00/0x01 as element values.
+
+    Label FIRST_TRUE_INDEX;
+
+    // Try to compute the result from higher 64 bits.
+    __ xvpickve2gr_d($dst$$Register, $src$$FloatRegister, 3);
+    __ li($tmp$$Register, (long)32 - 1);
+    __ bnez($dst$$Register, FIRST_TRUE_INDEX);
+
+    // Compute the result from the mid-higher 64 bits.
+    __ xvpickve2gr_d($dst$$Register, $src$$FloatRegister, 2);
+    __ li($tmp$$Register, (long)24 - 1);
+    __ bnez($dst$$Register, FIRST_TRUE_INDEX);
+
+    // Compute the result from the mid-lower 64 bits.
+    __ xvpickve2gr_d($dst$$Register, $src$$FloatRegister, 1);
+    __ li($tmp$$Register, (long)16 - 1);
+    __ bnez($dst$$Register, FIRST_TRUE_INDEX);
+
+    // Compute the result from the lower 64 bits.
+    __ xvpickve2gr_d($dst$$Register, $src$$FloatRegister, 0);
+    __ li($tmp$$Register, (long)8 - 1);
+
+    // Count the Trailing zero bytes.
+    __ bind(FIRST_TRUE_INDEX);
+    __ clz_d($dst$$Register, $dst$$Register);
+    __ srli_w($dst$$Register, $dst$$Register, 3);
+    __ sub_w($dst$$Register, $tmp$$Register, $dst$$Register);
+  %}
+  ins_pipe(pipe_slow);
+%}
+
 // ----------------------------- Vector comparison ----------------------------
 
 instruct cmpV16(vecX dst, vecX src1, vecX src2, immI cond)
@@ -15699,3 +15868,4 @@ instruct popcount8I(vecY dst, vecY src) %{
 //----------SMARTSPILL RULES---------------------------------------------------
 // These must follow all instruction definitions as they use the names
 // defined in the instructions definitions.
+
