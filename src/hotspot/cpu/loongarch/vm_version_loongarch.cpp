@@ -78,61 +78,53 @@ class VM_Version_StubGenerator: public StubCodeGenerator {
 
     address start = __ pc();
 
-    __ enter();
-    __ push(AT);
-    __ push(T5);
+    __ cpucfg(AT, R0);
+    __ st_w(AT, Address(A0, VM_Version::cpucfg_info_id0_offset()));
 
-    __ li(AT, (long)0);
-    __ cpucfg(T5, AT);
-    __ st_w(T5, A0, in_bytes(VM_Version::Loongson_Cpucfg_id0_offset()));
+    __ li(AT, 0x1);
+    __ cpucfg(AT, AT);
+    __ st_w(AT, Address(A0, VM_Version::cpucfg_info_id1_offset()));
 
-    __ li(AT, 1);
-    __ cpucfg(T5, AT);
-    __ st_w(T5, A0, in_bytes(VM_Version::Loongson_Cpucfg_id1_offset()));
+    __ li(AT, 0x2);
+    __ cpucfg(AT, AT);
+    __ st_w(AT, Address(A0, VM_Version::cpucfg_info_id2_offset()));
 
-    __ li(AT, 2);
-    __ cpucfg(T5, AT);
-    __ st_w(T5, A0, in_bytes(VM_Version::Loongson_Cpucfg_id2_offset()));
+    __ li(AT, 0x3);
+    __ cpucfg(AT, AT);
+    __ st_w(AT, Address(A0, VM_Version::cpucfg_info_id3_offset()));
 
-    __ li(AT, 3);
-    __ cpucfg(T5, AT);
-    __ st_w(T5, A0, in_bytes(VM_Version::Loongson_Cpucfg_id3_offset()));
+    __ li(AT, 0x4);
+    __ cpucfg(AT, AT);
+    __ st_w(AT, Address(A0, VM_Version::cpucfg_info_id4_offset()));
 
-    __ li(AT, 4);
-    __ cpucfg(T5, AT);
-    __ st_w(T5, A0, in_bytes(VM_Version::Loongson_Cpucfg_id4_offset()));
+    __ li(AT, 0x5);
+    __ cpucfg(AT, AT);
+    __ st_w(AT, Address(A0, VM_Version::cpucfg_info_id5_offset()));
 
-    __ li(AT, 5);
-    __ cpucfg(T5, AT);
-    __ st_w(T5, A0, in_bytes(VM_Version::Loongson_Cpucfg_id5_offset()));
+    __ li(AT, 0x6);
+    __ cpucfg(AT, AT);
+    __ st_w(AT, Address(A0, VM_Version::cpucfg_info_id6_offset()));
 
-    __ li(AT, 6);
-    __ cpucfg(T5, AT);
-    __ st_w(T5, A0, in_bytes(VM_Version::Loongson_Cpucfg_id6_offset()));
+    __ li(AT, 0x10);
+    __ cpucfg(AT, AT);
+    __ st_w(AT, Address(A0, VM_Version::cpucfg_info_id10_offset()));
 
-    __ li(AT, 10);
-    __ cpucfg(T5, AT);
-    __ st_w(T5, A0, in_bytes(VM_Version::Loongson_Cpucfg_id10_offset()));
+    __ li(AT, 0x11);
+    __ cpucfg(AT, AT);
+    __ st_w(AT, Address(A0, VM_Version::cpucfg_info_id11_offset()));
 
-    __ li(AT, 11);
-    __ cpucfg(T5, AT);
-    __ st_w(T5, A0, in_bytes(VM_Version::Loongson_Cpucfg_id11_offset()));
+    __ li(AT, 0x12);
+    __ cpucfg(AT, AT);
+    __ st_w(AT, Address(A0, VM_Version::cpucfg_info_id12_offset()));
 
-    __ li(AT, 12);
-    __ cpucfg(T5, AT);
-    __ st_w(T5, A0, in_bytes(VM_Version::Loongson_Cpucfg_id12_offset()));
+    __ li(AT, 0x13);
+    __ cpucfg(AT, AT);
+    __ st_w(AT, Address(A0, VM_Version::cpucfg_info_id13_offset()));
 
-    __ li(AT, 13);
-    __ cpucfg(T5, AT);
-    __ st_w(T5, A0, in_bytes(VM_Version::Loongson_Cpucfg_id13_offset()));
+    __ li(AT, 0x14);
+    __ cpucfg(AT, AT);
+    __ st_w(AT, Address(A0, VM_Version::cpucfg_info_id14_offset()));
 
-    __ li(AT, 14);
-    __ cpucfg(T5, AT);
-    __ st_w(T5, A0, in_bytes(VM_Version::Loongson_Cpucfg_id14_offset()));
-
-    __ pop(T5);
-    __ pop(AT);
-    __ leave();
     __ jr(RA);
 #   undef __
     return start;
@@ -174,10 +166,6 @@ void VM_Version::get_processor_features() {
   _features |= get_feature_flags_by_cpucfg();
 
   _supports_cx8 = true;
-
-  if (UseG1GC && FLAG_IS_DEFAULT(MaxGCPauseMillis)) {
-    FLAG_SET_DEFAULT(MaxGCPauseMillis, 150);
-  }
 
   if (supports_lsx()) {
     if (FLAG_IS_DEFAULT(UseLSX)) {
@@ -269,24 +257,49 @@ void VM_Version::get_processor_features() {
   assert(!is_la32(), "Should Not Reach Here, what is the cpu type?");
   assert( is_la64(), "Should be LoongArch64");
 
-  if (FLAG_IS_DEFAULT(AllocatePrefetchStyle)) {
-    FLAG_SET_DEFAULT(AllocatePrefetchStyle, 1);
-  }
+  int dcache_line = 1 << _cpuid_info.cpucfg_info_id12.bits.LINESIZELOG2;
 
-  if (FLAG_IS_DEFAULT(AllocatePrefetchLines)) {
-    FLAG_SET_DEFAULT(AllocatePrefetchLines, 3);
+  // Limit AllocatePrefetchDistance so that it does not exceed the
+  // static constraint of 512 defined in runtime/globals.hpp.
+  if (FLAG_IS_DEFAULT(AllocatePrefetchDistance)) {
+    // Based on RawAllocationRate results.
+    FLAG_SET_DEFAULT(AllocatePrefetchDistance, MIN2(512, 3*dcache_line));
   }
 
   if (FLAG_IS_DEFAULT(AllocatePrefetchStepSize)) {
-    FLAG_SET_DEFAULT(AllocatePrefetchStepSize, 64);
+    FLAG_SET_DEFAULT(AllocatePrefetchStepSize, dcache_line);
   }
 
-  if (FLAG_IS_DEFAULT(AllocatePrefetchDistance)) {
-    FLAG_SET_DEFAULT(AllocatePrefetchDistance, 192);
+  // Prefetch tuning based on SPECjbb2015 results.
+  //
+  // Mechanism:
+  // - SCAN: Hides memory read latency during object iteration.
+  // - COPY: Hides RFO write latency during object evacuation.
+  // Reducing these latencies directly shortens STW pauses, significantly
+  // boosting Critical-jOPS.
+  //
+  // 1. Single-NUMA Architectures:
+  //    - 192 bytes (3 cache lines) is the performance peak, delivering
+  //      an approximate 40% Critical-jOPS boost over the baseline,
+  //      most notably in adaptive young generation heap scenarios.
+  //    - 256 bytes is a close second.
+  //    - 576 bytes causes a ~6.7% regression compared to 192 due to
+  //      cache pollution, though it still outperforms the baseline.
+  //
+  // 2. Multi-NUMA Architectures:
+  //    Larger intervals (e.g., 576 bytes) help mitigate the higher
+  //    latency associated with cross-node memory access.
+  //
+  // Trade-off:
+  // We prioritize single-NUMA peak performance. The 192-byte setting
+  // offers the maximum uplift for mainstream single-node configurations
+  // while remaining performant on multi-NUMA systems.
+  if (FLAG_IS_DEFAULT(PrefetchCopyIntervalInBytes)) {
+    FLAG_SET_DEFAULT(PrefetchCopyIntervalInBytes, 3*dcache_line);
   }
 
-  if (FLAG_IS_DEFAULT(AllocateInstancePrefetchLines)) {
-    FLAG_SET_DEFAULT(AllocateInstancePrefetchLines, 1);
+  if (FLAG_IS_DEFAULT(PrefetchScanIntervalInBytes)) {
+    FLAG_SET_DEFAULT(PrefetchScanIntervalInBytes, 3*dcache_line);
   }
 
   // Basic instructions are used to implement SHA Intrinsics on LA, so sha

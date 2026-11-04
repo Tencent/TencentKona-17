@@ -251,18 +251,18 @@ protected:
 
 public:
   // Offsets for cpuid asm stub
-  static ByteSize Loongson_Cpucfg_id0_offset()  { return byte_offset_of(CpuidInfo, cpucfg_info_id0); }
-  static ByteSize Loongson_Cpucfg_id1_offset()  { return byte_offset_of(CpuidInfo, cpucfg_info_id1); }
-  static ByteSize Loongson_Cpucfg_id2_offset()  { return byte_offset_of(CpuidInfo, cpucfg_info_id2); }
-  static ByteSize Loongson_Cpucfg_id3_offset()  { return byte_offset_of(CpuidInfo, cpucfg_info_id3); }
-  static ByteSize Loongson_Cpucfg_id4_offset()  { return byte_offset_of(CpuidInfo, cpucfg_info_id4); }
-  static ByteSize Loongson_Cpucfg_id5_offset()  { return byte_offset_of(CpuidInfo, cpucfg_info_id5); }
-  static ByteSize Loongson_Cpucfg_id6_offset()  { return byte_offset_of(CpuidInfo, cpucfg_info_id6); }
-  static ByteSize Loongson_Cpucfg_id10_offset() { return byte_offset_of(CpuidInfo, cpucfg_info_id10); }
-  static ByteSize Loongson_Cpucfg_id11_offset() { return byte_offset_of(CpuidInfo, cpucfg_info_id11); }
-  static ByteSize Loongson_Cpucfg_id12_offset() { return byte_offset_of(CpuidInfo, cpucfg_info_id12); }
-  static ByteSize Loongson_Cpucfg_id13_offset() { return byte_offset_of(CpuidInfo, cpucfg_info_id13); }
-  static ByteSize Loongson_Cpucfg_id14_offset() { return byte_offset_of(CpuidInfo, cpucfg_info_id14); }
+  static ByteSize cpucfg_info_id0_offset()  { return byte_offset_of(CpuidInfo, cpucfg_info_id0); }
+  static ByteSize cpucfg_info_id1_offset()  { return byte_offset_of(CpuidInfo, cpucfg_info_id1); }
+  static ByteSize cpucfg_info_id2_offset()  { return byte_offset_of(CpuidInfo, cpucfg_info_id2); }
+  static ByteSize cpucfg_info_id3_offset()  { return byte_offset_of(CpuidInfo, cpucfg_info_id3); }
+  static ByteSize cpucfg_info_id4_offset()  { return byte_offset_of(CpuidInfo, cpucfg_info_id4); }
+  static ByteSize cpucfg_info_id5_offset()  { return byte_offset_of(CpuidInfo, cpucfg_info_id5); }
+  static ByteSize cpucfg_info_id6_offset()  { return byte_offset_of(CpuidInfo, cpucfg_info_id6); }
+  static ByteSize cpucfg_info_id10_offset() { return byte_offset_of(CpuidInfo, cpucfg_info_id10); }
+  static ByteSize cpucfg_info_id11_offset() { return byte_offset_of(CpuidInfo, cpucfg_info_id11); }
+  static ByteSize cpucfg_info_id12_offset() { return byte_offset_of(CpuidInfo, cpucfg_info_id12); }
+  static ByteSize cpucfg_info_id13_offset() { return byte_offset_of(CpuidInfo, cpucfg_info_id13); }
+  static ByteSize cpucfg_info_id14_offset() { return byte_offset_of(CpuidInfo, cpucfg_info_id14); }
 
   static void clean_cpuFeatures()   { _features = 0; }
 

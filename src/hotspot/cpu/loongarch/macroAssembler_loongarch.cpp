@@ -2944,7 +2944,9 @@ void MacroAssembler::lea(Register rd, Address src) {
     }
   } else {
     if (scale == 0) {
-      if (is_simm(disp, 12)) {
+      if (disp == 0) {
+        add_d(dst, base, index);
+      } else if (is_simm(disp, 12)) {
         add_d(AT, base, index);
         addi_d(dst, AT, disp);
       } else {
@@ -2955,7 +2957,9 @@ void MacroAssembler::lea(Register rd, Address src) {
         add_d(dst, AT, index);
       }
     } else {
-      if (is_simm(disp, 12)) {
+      if (disp == 0) {
+        alsl_d(dst, index, base, scale - 1);
+      } else if (is_simm(disp, 12)) {
         alsl_d(AT, index, base, scale - 1);
         addi_d(dst, AT, disp);
       } else {
